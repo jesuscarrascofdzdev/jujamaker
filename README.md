@@ -43,27 +43,30 @@ Arriba a la derecha, en el desplegable de ejecución, está la carpeta **MakerOn
 | Subir (revisar) | Sube los modelos de `subidas/pendientes/` y, antes de guardar cada borrador, te deja mirarlo en Chrome: ENTER lo guarda; `no` + ENTER lo descarta (se queda en `pendientes/`) |
 | Subir | Sube los modelos de `subidas/pendientes/` como borrador |
 | Codegen | Chrome con sesión y el Playwright Inspector, para grabar selectores |
-| App de escritorio | Abre la app: pantallas Sesión, Subir (arrastrar carpetas, subir, revisar con botones y parar) y Descargar (simular, descargar, parar con un botón y editar la lista de usuarios). Usa la misma carpeta de datos que los programas de terminal (la raíz del repo), así que comparte la sesión, `usuarios.json` y `descargados.txt` |
+| Diagnóstico del formulario | Abre el formulario de subida y apunta en `diagnostico-formulario.txt` las licencias, categorías y tipos de impresión que ofrece la web, y de qué peticiones salen. No sube ni guarda nada |
+| App de escritorio | Abre la app: pantallas Sesión, Subir (agregar, editar o eliminar modelos, escribir su descripción, arrastrar carpetas, subir, revisar con botones y parar) y Descargar (simular, descargar, parar con un botón y editar la lista de usuarios; al terminar deja lo descargado en un zip en el escritorio, `makeronline-31-10-2026.zip`, o `… (2).zip` si ya hay uno de ese día). Usa la misma carpeta de datos que los programas de terminal (la raíz del repo), así que comparte la sesión, `usuarios.json` y `descargados.txt` |
 
 **Cómo preparar un modelo para subir:** una carpeta por modelo dentro de `subidas/pendientes/`. Los nombres de los archivos dan igual:
 - al menos un modelo, `.3mf` o `.stl`;
 - al menos una imagen, `.jpg` o `.png`. La portada es la que se llama `portada`, `cover` o como la carpeta; si no hay ninguna así, la primera por orden alfabético;
-- los textos, en un `.json` con el formato de `info.json` o, si no hay `.json`, en un `.txt` como este:
+- los textos, en un `.json` con el formato de `info.json` o, si no hay `.json`, en un `.txt` como este (también vale un `.txt` por apartados como el que da una IA: "Model Title", "20 Tags", "Detailed Description"…):
   ```
   Título: Llavero gato
-  Categoría: Toys&Games > Action Figures
+  Categoría: Toys&Games > Action Figures   (opcional)
   Etiquetas: gato, llavero, regalo
-  Licencia: CC0 (aka CC Zero)      (opcional)
+  Licencia: CC0                    (opcional)
   Tipo: FDM                        (opcional)
   Descripción:
   Todo lo que venga después, con sus saltos de línea.
   ```
+  Si no hay categoría, licencia o tipo, se usan Toys&Games > Action Figures, CC0 y FDM (se pueden cambiar luego en el borrador).
+  En la pantalla Subir, el botón **Descripción** de cada carpeta abre un formulario para escribir estos textos (se puede guardar a medias). Si los traes ya escritos, déjalos en la carpeta del modelo en `.txt` o `.json`. Lo que se quede entre corchetes `[ ]` cuenta como sin rellenar, y las líneas del `.txt` que empiezan por `#` no cuentan.
 
 De momento se suben la portada y un modelo por zona; si hay más imágenes o modelos, la app y la terminal avisan de lo que se queda sin subir.
 
 **Para parar Descargar o Subir sin dejar nada a medias**, escribe `parar` en la consola y pulsa ENTER. El Downloader termina el modelo que esté bajando y no empieza otro; el Uploader no guarda el borrador que tenga a medias, que se queda en `pendientes/`. El botón *Stop* de IntelliJ, en cambio, lo corta en seco.
 
-Los programas de terminal se ejecutan desde la raíz del repo. Ahí se crean `chrome-profile/`, `usuarios.json` (y `usuarios.json.bak`, la copia que guarda la app antes de cambiarlo por primera vez), `descargados.txt`, `ajustes.properties` (lo que recuerda la app), `subidas/` y `modelos-descargados/`. **Nada de eso se sube a git.**
+Los programas de terminal se ejecutan desde la raíz del repo. Ahí se crean `chrome-profile/`, `usuarios.json` (y `usuarios.json.bak`, la copia que guarda la app antes de cambiarlo por primera vez), `descargados.txt`, `ajustes.properties` (lo que recuerda la app), `subidas/` y `modelos-descargados/` (donde descarga la terminal). La app descarga en `descarga-en-curso/`, que vacía al crear el zip, y guarda los errores de las descargas en `errores-descargas/`. **Nada de eso se sube a git.**
 
 **Desde la terminal (opcional)**
 - Compilar todo: `gradlew build`
@@ -96,7 +99,10 @@ Los programas de terminal se ejecutan desde la raíz del repo. Ahí se crean `ch
   - `core/BuscadorUsuarios` encuentra a un usuario por la URL de su perfil (`window.__NUXT__.data[0].userInfo`) o por el buscador (`api/search/user`). Lo usan el Downloader y `Sesion.buscarUsuario`, que es lo que llama la app al añadir a alguien; la app lo guarda como `"Nombre · URL-del-perfil"`. `core/Api` hace las peticiones a la API con el token de la sesión.
   - `EstadoEdicion` + `DialogoUsuarios`: la ventana de Editar (añadir comprobando en MakerOnline, quitar con confirmación).
   - `EstadoSubida` + `PantallaSubir`: lista `subidas/pendientes/` comprobando cada carpeta con `ModelFolder.load` (sin moverla) y solo pasa al Uploader las que están bien. Las carpetas arrastradas (o elegidas con "Añadir carpetas…") se copian a pendientes con `CopiaCarpetas`. `RevisionApp` es la `Revision` de la app: el Uploader espera en el hilo del navegador a que se pulse Guardar borrador o Descartar. `Uploader.Resumen.carpetasConError` dice dónde han quedado en `errores/`.
-  - `core/ModelFolder` comprueba una carpeta de modelo (nombres libres, ver arriba) y `core/TextosModelo` lee el `.txt` de textos.
+  - `core/ModelFolder` comprueba una carpeta de modelo (nombres libres, ver arriba) y `core/TextosModelo` lee y escribe el `.txt` de textos.
+  - Ventana Agregar / Editar modelo: `EdicionModelo` (estado: imagen, modelo y descripción; guarda a medias y pide el nombre de la carpeta la primera vez; la imagen se copia como `portada.<ext>`) + `VentanaModelo` (interfaz).
+  - Ventana Descripción: `FormularioTextos` (estado) + `VentanaDescripcion` (interfaz). `core/TextosCarpeta` lee y guarda los textos de una carpeta sin exigir que esté completa. Las opciones de los desplegables salen de `core/CatalogoMakerOnline`, que solo tiene lo comprobado en la web (se completa con el Diagnóstico del formulario).
+  - `Papelera`: eliminar una carpeta de pendientes la manda a la papelera de Windows (`Desktop.moveToTrash`) o, si no se puede, a `subidas/eliminados/`.
   - `Comunes.kt`: piezas que usan varias pantallas (`ListaMensajes`, `Eleccion`, `Casilla`, `elegirCarpetas`).
   - `Creador`: la cuenta del creador, que la app pasa al Downloader en `Opciones.fijos` (va antes que `usuarios.json`, sin repetirse) cuando se descarga toda la lista y está marcada. No está en `usuarios.json` y no se puede quitar; la casilla se recuerda en `ajustes.properties` (`Ajustes`). La terminal no la incluye.
 - **Reglas:** textos y comentarios en español. No inventar selectores ni endpoints de MakerOnline. Pausa de 10 a 30 s entre descargas y nunca en paralelo. No saltar captchas.

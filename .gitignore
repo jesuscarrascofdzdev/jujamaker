@@ -14,10 +14,13 @@ chrome-profile/
 subidas/
 modelos/
 modelos-descargados/
+descarga-en-curso/
+errores-descargas/
 usuarios.json
 usuarios.json.bak
 usuarios.json.tmp
 ajustes.properties
+diagnostico-*.txt
 descargados.txt
 **/resultado.png
 **/error.png

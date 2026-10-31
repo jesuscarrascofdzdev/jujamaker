@@ -9,6 +9,7 @@ import dev.jefe.makeronline.AgenteException
 import dev.jefe.makeronline.Cancelacion
 import dev.jefe.makeronline.ModelFolder
 import dev.jefe.makeronline.Rutas
+import dev.jefe.makeronline.TextosCarpeta
 import dev.jefe.makeronline.Uploader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -22,12 +23,14 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * @property problemas lo que hay que arreglar (vacía si está bien)
  * @property avisos    lo que se puede subir pero conviene saber (p. ej. imágenes que de momento no se suben)
+ * @property detalle   título y categoría ("Llavero gato · Toys&Games - Action Figures"), si está bien
  */
 data class CarpetaPendiente(
     val nombre: String,
     val dir: Path,
     val problemas: List<String>,
     val avisos: List<String> = emptyList(),
+    val detalle: String? = null,
 ) {
     val valida: Boolean get() = problemas.isEmpty()
 }
@@ -117,7 +120,10 @@ class EstadoSubida(
         val nombre = dir.fileName.toString()
         return try {
             val m = ModelFolder.load(dir)
-            CarpetaPendiente(nombre, dir, emptyList(), m.avisos())
+            val meta = m.meta()
+            val detalle = meta.title() + " · " + meta.categoryOrDefault().joinToString(" - ") +
+                (if (meta.sinCategoria()) Textos.POR_DEFECTO else "")
+            CarpetaPendiente(nombre, dir, emptyList(), m.avisos(), detalle)
         } catch (e: IllegalStateException) {
             CarpetaPendiente(nombre, dir, (e.message ?: e.toString()).lines().filter { it.isNotBlank() })
         } catch (e: IOException) {
@@ -143,6 +149,108 @@ class EstadoSubida(
             copiando = false
             cargar()
         }
+    }
+
+    // ------------------------------------------------------------ ventana Descripción
+
+    /** La ventana Descripción abierta desde la lista ("Agregar descripción"), o null si está cerrada. */
+    var descripcion by mutableStateOf<EdicionTextos?>(null)
+        private set
+
+    /** Abre la ventana Descripción de una carpeta de la lista, con los textos que ya tenga. */
+    fun abrirDescripcion(nombre: String) {
+        val c = carpetas.firstOrNull { it.nombre == nombre } ?: return
+        avisoCarpetas = null
+        errorCarpetas = null
+        val l = try {
+            TextosCarpeta.leer(c.dir)
+        } catch (e: IOException) {
+            errorCarpetas = Textos.errorInesperado(e)
+            return
+        }
+        if (l.problema != null && l.archivo == null) { // varios archivos de textos: no se sabe cuál editar
+            errorCarpetas = l.problema
+            return
+        }
+        descripcion = EdicionTextos(c.nombre, c.dir, l.archivo, l.problema, FormularioTextos().apply { cargar(l.meta) })
+    }
+
+    /** Guarda lo escrito en la carpeta (aunque falte algo) y cierra la ventana. */
+    fun guardarDescripcion() {
+        val e = descripcion ?: return
+        try {
+            val destino = TextosCarpeta.guardar(e.dir, e.archivo, e.formulario.aMeta())
+            avisoCarpetas = Textos.descripcionGuardada(e.carpeta, destino.fileName.toString())
+            descripcion = null
+            cargar()
+        } catch (ex: Exception) {
+            e.error = Textos.errorInesperado(ex)
+        }
+    }
+
+    fun cerrarDescripcion() {
+        descripcion = null
+    }
+
+    // ------------------------------------------------------------ eliminar una carpeta
+
+    /** La carpeta que espera el "Sí, eliminar", o null. */
+    var aEliminar by mutableStateOf<String?>(null)
+
+    /** Quita una carpeta de pendientes: a la papelera de Windows (o a subidas/eliminados/). */
+    fun eliminar(nombre: String) {
+        aEliminar = null
+        avisoCarpetas = null
+        errorCarpetas = null
+        val c = carpetas.firstOrNull { it.nombre == nombre } ?: return
+        try {
+            val destino = Papelera.tirar(c.dir, rutas.eliminados)
+            avisoCarpetas = if (destino == null) Textos.eliminadaPapelera(nombre) else Textos.eliminadaEn(nombre, destino.toString())
+        } catch (e: Exception) {
+            errorCarpetas = Textos.noSePuedeEliminar(nombre, e.message?.lineSequence()?.firstOrNull() ?: e.toString())
+        } finally {
+            cargar()
+        }
+    }
+
+    // ------------------------------------------------------------ ventana Agregar / Editar modelo
+
+    /** La ventana Agregar modelo / Editar modelo, o null si está cerrada. */
+    var ventanaModelo by mutableStateOf<EdicionModelo?>(null)
+        private set
+
+    fun abrirModeloNuevo() {
+        avisoCarpetas = null
+        errorCarpetas = null
+        try {
+            Files.createDirectories(rutas.pendientes)
+            ventanaModelo = EdicionModelo(rutas.pendientes, null)
+        } catch (e: Exception) {
+            errorCarpetas = Textos.errorInesperado(e)
+        }
+    }
+
+    /** Abre una carpeta de la lista para cambiarle la imagen, el modelo o la descripción. */
+    fun abrirModelo(nombre: String) {
+        val c = carpetas.firstOrNull { it.nombre == nombre } ?: return
+        avisoCarpetas = null
+        errorCarpetas = null
+        try {
+            ventanaModelo = EdicionModelo(rutas.pendientes, c.dir)
+        } catch (e: Exception) {
+            errorCarpetas = Textos.errorInesperado(e)
+        }
+    }
+
+    /** Guardar de la ventana: se queda abierta (para seguir) y la lista se actualiza. */
+    fun guardarModelo() {
+        val v = ventanaModelo ?: return
+        if (v.guardar()) cargar()
+    }
+
+    fun cerrarModelo() {
+        ventanaModelo = null
+        cargar()
     }
 
     /** Por qué no se puede empezar, o null si se puede. */
@@ -245,4 +353,21 @@ class EstadoSubida(
     private companion object {
         const val MAX_MENSAJES = 2000
     }
+}
+
+/**
+ * La ventana Descripción abierta para una carpeta de pendientes.
+ *
+ * @property archivo el .json o .txt donde se guardará; null = se crea info.json
+ * @property aviso   algo a tener en cuenta (p. ej. que el archivo actual no se podía leer)
+ */
+class EdicionTextos(
+    val carpeta: String,
+    val dir: Path,
+    val archivo: Path?,
+    val aviso: String?,
+    val formulario: FormularioTextos,
+) {
+    /** Por qué no se ha podido guardar, o null. */
+    var error by mutableStateOf<String?>(null)
 }

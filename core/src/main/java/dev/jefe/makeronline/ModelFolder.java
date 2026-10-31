@@ -45,10 +45,7 @@ public record ModelFolder(Path dir, String name, List<Path> modelos, List<Path> 
         String name = dir.getFileName().toString();
         List<String> errors = new ArrayList<>();
 
-        List<Path> archivos;
-        try (Stream<Path> s = Files.list(dir)) {
-            archivos = s.filter(Files::isRegularFile).filter(p -> !ignorado(p)).sorted(POR_NOMBRE).toList();
-        }
+        List<Path> archivos = archivos(dir);
         List<Path> modelos = conExtension(archivos, "3mf", "stl");
         List<Path> imagenes = portadaPrimero(conExtension(archivos, "jpg", "jpeg", "png"), name);
         if (modelos.isEmpty()) errors.add("Falta el modelo: un archivo .3mf o .stl");
@@ -62,16 +59,14 @@ public record ModelFolder(Path dir, String name, List<Path> modelos, List<Path> 
         else if (jsons.size() == 1) textos = jsons.get(0);
         else if (txts.size() > 1) errors.add("Hay varios .txt; deja solo uno con los textos: " + nombres(txts));
         else if (txts.size() == 1) textos = txts.get(0);
-        else errors.add("Faltan los textos: un .json (como info.json) o un .txt con título, descripción, "
-                    + "etiquetas y categoría");
+        else errors.add("Faltan los textos: un .json (como info.json) o un .txt con título, descripción "
+                    + "y etiquetas");
 
         ModelMeta meta = null;
         if (textos != null) {
             String archivo = textos.getFileName().toString();
             try {
-                meta = extension(textos).equals("json")
-                        ? JSON.readValue(textos.toFile(), ModelMeta.class)
-                        : TextosModelo.leer(textos);
+                meta = leerTextos(textos);
                 for (String e : meta.validate()) errors.add(archivo + ": " + e);
             } catch (JsonProcessingException e) {
                 String donde = e.getLocation() == null ? "" : " en la línea " + e.getLocation().getLineNr();
@@ -85,6 +80,45 @@ public record ModelFolder(Path dir, String name, List<Path> modelos, List<Path> 
 
         if (!errors.isEmpty()) throw new IllegalStateException(String.join("\n", errors));
         return new ModelFolder(dir, name, modelos, imagenes, textos, meta);
+    }
+
+    /**
+     * Los archivos de textos de la carpeta, con las mismas reglas que load(): los .json si hay
+     * alguno; si no, los .txt. Lo normal es uno; si hay más, load() lo avisa como problema.
+     */
+    public static List<Path> archivosDeTextos(Path dir) throws IOException {
+        List<Path> archivos = archivos(dir);
+        List<Path> jsons = conExtension(archivos, "json");
+        return jsons.isEmpty() ? conExtension(archivos, "txt") : jsons;
+    }
+
+    /**
+     * Lee los textos de un .json o un .txt (según la extensión), sin comprobar que estén completos.
+     *
+     * @throws IOException           si no se puede leer o el .json está mal escrito
+     * @throws IllegalStateException si el .txt tiene líneas que no se entienden
+     */
+    public static ModelMeta leerTextos(Path archivo) throws IOException {
+        return extension(archivo).equals("json")
+                ? JSON.readValue(archivo.toFile(), ModelMeta.class)
+                : TextosModelo.leer(archivo);
+    }
+
+    /** Las imágenes de la carpeta, con la portada la primera (aunque la carpeta esté incompleta). */
+    public static List<Path> imagenesDe(Path dir) throws IOException {
+        return portadaPrimero(conExtension(archivos(dir), "jpg", "jpeg", "png"), dir.getFileName().toString());
+    }
+
+    /** Los .3mf y .stl de la carpeta, por nombre (aunque la carpeta esté incompleta). */
+    public static List<Path> modelosDe(Path dir) throws IOException {
+        return conExtension(archivos(dir), "3mf", "stl");
+    }
+
+    /** Los archivos de la carpeta que cuentan (sin los del programa ni los del sistema), por nombre. */
+    private static List<Path> archivos(Path dir) throws IOException {
+        try (Stream<Path> s = Files.list(dir)) {
+            return s.filter(Files::isRegularFile).filter(p -> !ignorado(p)).sorted(POR_NOMBRE).toList();
+        }
     }
 
     /** La portada (la primera imagen). */
@@ -108,6 +142,9 @@ public record ModelFolder(Path dir, String name, List<Path> modelos, List<Path> 
      */
     public List<String> avisos() {
         List<String> avisos = new ArrayList<>();
+        for (String d : CatalogoMakerOnline.desconocidos(meta)) {
+            avisos.add("Ojo: " + d + "; si la web no lo tiene, fallará al subir.");
+        }
         int imagenesSinSubir = imagenes.size() - 1;
         if (imagenesSinSubir > 0) {
             avisos.add("De momento solo se sube la portada (" + portada().getFileName() + "); "

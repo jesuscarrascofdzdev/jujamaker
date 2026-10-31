@@ -10,6 +10,9 @@ import dev.jefe.makeronline.Cancelacion
 import dev.jefe.makeronline.Downloader
 import dev.jefe.makeronline.ListaUsuarios
 import dev.jefe.makeronline.Rutas
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -17,6 +20,9 @@ import kotlin.coroutines.cancellation.CancellationException
  *
  * Todo se cambia desde el hilo de la ventana: las funciones `suspend` vuelven a él al terminar,
  * y los avisos de core llegan a él a través de [ProgresoApp].
+ *
+ * Se descarga en descarga-en-curso/ y, al terminar, todo va a un zip en el escritorio
+ * (ver [ZipDescargas]): así no hay que buscar nada dentro de la carpeta del programa.
  */
 class EstadoDescarga(
     private val rutas: Rutas,
@@ -87,6 +93,19 @@ class EstadoDescarga(
     var error by mutableStateOf<String?>(null)
         private set
 
+    /** true mientras se crea el zip en el escritorio. */
+    var empaquetando by mutableStateOf(false)
+        private set
+    /** El zip creado en esta vez, o null (si no se ha bajado nada no se crea). */
+    var zip by mutableStateOf<Path?>(null)
+        private set
+    /** Cuántos modelos lleva [zip]. */
+    var modelosEnZip by mutableStateOf(0)
+        private set
+    /** Por qué no se ha podido crear el zip, o null. */
+    var errorZip by mutableStateOf<String?>(null)
+        private set
+
     val libre: Boolean get() = ocupacion.libre
 
     /** Para poder parar. Se pide desde la ventana y lo mira core en el hilo del navegador. */
@@ -94,6 +113,9 @@ class EstadoDescarga(
     private var cancelacion: Cancelacion? = null
 
     private val progreso = ProgresoApp(::aplicar)
+
+    /** Ruta de descarga-en-curso tal como sale en los mensajes de core (se quita para que se lean mejor). */
+    private val prefijoTrabajo = rutas.descargaEnCurso.toAbsolutePath().toString() + File.separator
 
     /** Vuelve a leer usuarios.json. */
     fun cargarLista() {
@@ -143,20 +165,24 @@ class EstadoDescarga(
             // El creador va el primero, pero solo al descargar toda la lista
             if (!soloSeleccionado && incluirCreador) listOf(Creador.ENTRADA) else emptyList(),
         )
+        var cerrandoApp = false
         try {
             resumen = hilo.ejecutar {
                 // Solo un programa con Chrome a la vez: comparten chrome-profile/ con la terminal
                 AgentLock.acquire(rutas.candado, "MakerOnline Desktop (descargando)", false, progreso).use {
-                    Downloader(rutas, progreso, c).ejecutar(opciones)
+                    Downloader(rutas.paraLaApp(), progreso, c).ejecutar(opciones)
                 }
             }
         } catch (e: CancellationException) {
-            throw e // la app se está cerrando: no es un error
+            cerrandoApp = true
+            throw e // la app se está cerrando: no es un error (lo bajado irá en el próximo zip)
         } catch (e: AgenteException) {
             error = e.message
         } catch (e: Exception) {
             error = Textos.errorInesperado(e)
         } finally {
+            // También si se ha parado o ha fallado: lo que esté completo va al zip
+            if (!simular && !cerrandoApp) empaquetar()
             enMarcha = false
             parando = false
             cancelacion = null
@@ -166,6 +192,37 @@ class EstadoDescarga(
             ocupacion.terminar()
             cargarLista() // por si el Downloader ha creado usuarios.json
         }
+    }
+
+    /** Pasa lo descargado a un zip en el escritorio (en el hilo del navegador, para no congelar la ventana). */
+    private suspend fun empaquetar() {
+        if (!Files.isDirectory(rutas.descargaEnCurso)) return
+        empaquetando = true
+        usuarioActual = null
+        modeloActual = null
+        pausaHasta = null
+        try {
+            val r = hilo.ejecutar {
+                ZipDescargas.empaquetar(rutas.descargaEnCurso, ZipDescargas.escritorio(), rutas.erroresDescargas)
+            }
+            r.zip?.let {
+                zip = it
+                modelosEnZip = r.modelos
+                anotar(Evento.Mensaje(TipoMensaje.CORRECTO, Textos.zipCreado(it.fileName.toString(), r.modelos)))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            errorZip = Textos.errorZip(e.message ?: e.toString())
+        } finally {
+            empaquetando = false
+        }
+    }
+
+    /** Dónde está el errores.txt de una carpeta de usuario del resumen (se guarda aparte al terminar). */
+    fun erroresDe(carpetaUsuario: Path): Path {
+        val guardado = rutas.erroresDescargas.resolve(carpetaUsuario.fileName.toString()).resolve("errores.txt")
+        return if (Files.exists(guardado)) guardado else carpetaUsuario.resolve("errores.txt")
     }
 
     /** Botón "Parar": core para en el siguiente punto seguro, sin dejar nada a medias. */
@@ -189,6 +246,8 @@ class EstadoDescarga(
         pausaHasta = null
         captcha = null
         parando = false
+        zip = null
+        errorZip = null
     }
 
     /** Aplica un aviso de core. Siempre en el hilo de la ventana (ver ProgresoApp). */
@@ -220,7 +279,15 @@ class EstadoDescarga(
         }
     }
 
-    private fun anotar(m: Evento.Mensaje) {
+    private fun anotar(original: Evento.Mensaje) {
+        // core cuenta dónde guarda cada cosa; en la app eso es una carpeta temporal que acaba en el
+        // zip, así que se deja solo la parte "usuario/modelo" y se quita la línea "Carpeta: …"
+        if (original.texto.trim() == "Carpeta: " + prefijoTrabajo.dropLast(1)) return
+        val m = if (prefijoTrabajo !in original.texto) original else original.copy(
+            texto = original.texto
+                .replace(Regex(" descargados en " + Regex.escape(prefijoTrabajo) + "[^\\\\/]+$"), " descargados")
+                .replace(prefijoTrabajo, ""),
+        )
         mensajes.add(m)
         if (mensajes.size > MAX_MENSAJES) mensajes.removeAt(0)
     }

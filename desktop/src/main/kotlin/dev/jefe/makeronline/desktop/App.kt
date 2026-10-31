@@ -43,7 +43,7 @@ fun App(app: EstadoApp) {
                     when (app.pantalla) {
                         Pantalla.SESION -> PantallaSesion(app.sesion, app.rutas.datos.toString(), alcance)
                         Pantalla.SUBIR -> PantallaSubir(app.subida, app.rutas, alcance)
-                        Pantalla.DESCARGAR -> PantallaDescargar(app.descarga, app.edicion, app.rutas.descargas, alcance)
+                        Pantalla.DESCARGAR -> PantallaDescargar(app.descarga, app.edicion, alcance)
                     }
                 }
             }
@@ -103,6 +103,23 @@ fun abrir(ruta: Path) {
     } catch (_: Exception) {
         // si no se puede abrir, no pasa nada
     }
+}
+
+/** Abre el Explorador con el archivo ya marcado; si no se puede, abre la carpeta donde está. */
+fun mostrarArchivo(ruta: Path) {
+    try {
+        if (System.getProperty("os.name").startsWith("Windows")) {
+            ProcessBuilder("explorer.exe", "/select,", ruta.toAbsolutePath().toString()).start()
+            return
+        }
+        if (Desktop.getDesktop().isSupported(Desktop.Action.BROWSE_FILE_DIR)) {
+            Desktop.getDesktop().browseFileDirectory(ruta.toFile())
+            return
+        }
+    } catch (_: Exception) {
+        // se abre la carpeta, abajo
+    }
+    ruta.parent?.let { abrir(it) }
 }
 
 /** Un recuadro con el contenido en columna. */

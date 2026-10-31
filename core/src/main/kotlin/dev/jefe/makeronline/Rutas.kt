@@ -6,8 +6,8 @@ import java.nio.file.Path
  * Dónde guarda el programa cada cosa.
  *
  * Los programas de terminal usan la carpeta desde la que se lanzan, como siempre
- * ([carpetaActual]). La app de escritorio usará la carpeta de datos del usuario (fase 4)
- * y dejará elegir dónde van las descargas y las subidas.
+ * ([carpetaActual]). La app de escritorio descarga en [descargaEnCurso] y lo deja en un zip
+ * en el escritorio; más adelante usará la carpeta de datos del usuario (fase 4).
  */
 class Rutas @JvmOverloads constructor(
     /** Carpeta base: sesión de Chrome, candado, usuarios.json y descargados.txt. */
@@ -38,7 +38,19 @@ class Rutas @JvmOverloads constructor(
     val registro: Path get() = datos.resolve("descargados.txt")
 
     /** Donde estaba antes el registro: si existe, se pasa a [registro]. */
-    val registroAntiguo: Path get() = descargas.resolve("descargados.txt")
+    val registroAntiguo: Path get() = datos.resolve("modelos-descargados").resolve("descargados.txt")
+
+    /**
+     * La app descarga aquí y, al terminar, lo pasa a un zip en el escritorio y vacía la carpeta
+     * (ver ZipDescargas en la app). La terminal sigue usando [descargas].
+     */
+    val descargaEnCurso: Path get() = datos.resolve("descarga-en-curso")
+
+    /** Errores de las descargas de la app, por usuario: errores.txt y capturas error_<id>.png. */
+    val erroresDescargas: Path get() = datos.resolve("errores-descargas")
+
+    /** Las mismas rutas, pero con las descargas en [descargaEnCurso]: las que usa la app. */
+    fun paraLaApp(): Rutas = Rutas(datos, descargaEnCurso, subidas)
 
     /** Modelos preparados para subir. */
     val pendientes: Path get() = subidas.resolve("pendientes")
@@ -48,6 +60,9 @@ class Rutas @JvmOverloads constructor(
 
     /** Modelos que no se han podido subir, con error.txt y una captura. */
     val errores: Path get() = subidas.resolve("errores")
+
+    /** Carpetas eliminadas desde la app cuando no se pueden mandar a la papelera de Windows. */
+    val eliminados: Path get() = subidas.resolve("eliminados")
 
     companion object {
         /** La carpeta desde la que se lanza el programa: lo de siempre en la versión de terminal. */

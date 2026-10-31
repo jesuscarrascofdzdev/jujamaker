@@ -52,7 +52,7 @@ object Textos {
     const val DESCARGAR_EXPLICACION =
         "Repasa los usuarios de tu lista y descarga sus modelos nuevos (los que aún no tienen tu " +
             "like). Al terminar cada uno le da like, así no se vuelve a bajar. Entre descarga y " +
-            "descarga espera de 10 a 30 segundos."
+            "descarga espera de 10 a 30 segundos. Al terminar, lo descargado queda en un zip en tu escritorio."
     fun usuariosTitulo(n: Int) = "Usuarios ($n)"
     const val RECARGAR = "Recargar"
     const val LISTA_NO_EXISTE = "Todavía no hay lista de usuarios. Pulsa Editar para añadir el primero."
@@ -94,7 +94,13 @@ object Textos {
     const val RESUMEN_PARADO = "Parado (lo has pedido tú). No se ha dejado nada a medias."
     fun resumen(descargados: Int, soloLike: Int, yaTenian: Int, errores: Int) =
         "$descargados descargados · $soloLike solo faltaba el like · $yaTenian ya tenían like · $errores con error"
-    const val ABRIR_DESCARGAS = "Abrir la carpeta de descargas"
+    const val MOSTRAR_ZIP = "Mostrar el zip"
+    const val CREANDO_ZIP = "Creando el zip en el escritorio…"
+    fun zipCreado(nombre: String, modelos: Int) =
+        "Zip creado en el escritorio: $nombre (" + (if (modelos == 1) "1 modelo" else "$modelos modelos") + ")"
+    fun errorZip(motivo: String) =
+        "✘ No se ha podido crear el zip en el escritorio: $motivo\n" +
+            "  Lo descargado no se ha perdido: irá en el zip de la próxima descarga."
     const val VER_ERRORES = "Ver detalle de errores"
     const val ERROR_ULTIMOS = "Pon cuántos de los últimos modelos quieres mirar (un número de 1 en adelante)."
     const val ERROR_MAXIMO = "El máximo de descargas tiene que ser un número de 1 en adelante, o dejarlo vacío."
@@ -124,19 +130,21 @@ object Textos {
         "Los cambios se guardan al momento en usuarios.json. La primera vez se guarda una copia del " +
             "archivo tal como estaba en usuarios.json.bak (los comentarios que tuviera se quedan ahí)."
     const val CERRAR = "Cerrar"
+    const val GUARDAR = "Guardar"
+    const val ELIGE = "Elige…"
 
     // ------------------------------------------------------------ subir
     const val SUBIR_TITULO = "Subir"
     const val SUBIR_EXPLICACION =
-        "Sube como borrador los modelos de la carpeta de pendientes. Cada modelo va en su carpeta, con los " +
-            "nombres que quieras: el modelo (.3mf o .stl), al menos una imagen (.jpg o .png; la portada es la " +
-            "que se llama portada, cover o como la carpeta, o si no la primera) y los textos en un .json o un " +
-            ".txt. Al terminar, cada carpeta pasa a subidos/ (o a errores/, con una captura, si algo falla)."
+        "Sube como borrador cada carpeta de pendientes: un modelo por carpeta, con su .3mf (o .stl), una imagen y la descripción."
+    const val FORMATO_CARPETAS =
+        "Los nombres de los archivos dan igual. La portada es la imagen que se llama portada, cover o como la " +
+            "carpeta; si no, la primera. Los textos van en un .json o un .txt. Al subir, cada carpeta pasa a " +
+            "subidos/ (o a errores/, con una captura, si algo falla)."
     fun pendientesTitulo(n: Int) = "Pendientes ($n)"
     const val ABRIR_PENDIENTES = "Abrir la carpeta"
     const val SOLTAR_AQUI =
-        "Arrastra aquí las carpetas de tus modelos, o una carpeta que tenga una carpeta por modelo. " +
-            "Se copian a pendientes; las tuyas no se tocan."
+        "Puedes arrastrar aquí carpetas de modelos (se copian; las tuyas no se tocan)."
     const val SUELTA_AHORA = "Suéltalas aquí"
     const val ANADIR_CARPETAS = "Añadir carpetas…"
     const val ELEGIR_CARPETAS = "Elige las carpetas de los modelos"
@@ -152,11 +160,10 @@ object Textos {
     fun noSePuedeCopiar(nombre: String, motivo: String) = "✘ No he podido copiar $nombre: $motivo"
     const val NADA_EN_PENDIENTES = "No hay nada en pendientes."
     const val LISTA_PARA_SUBIR = "Lista para subir"
+    const val POR_DEFECTO = " (por defecto)"
     fun todasLasValidas(n: Int) = "Todas las que están bien ($n)"
     const val SOLO_LA_SELECCIONADA = "Solo la seleccionada"
-    const val REVISAR = "Revisar cada borrador antes de guardarlo"
-    const val REVISAR_AYUDA =
-        "Con todo subido, la app espera a que mires el formulario en Chrome y pulses Guardar borrador o Descartar."
+    const val REVISAR = "Revisar antes de guardar"
     const val SUBIR = "Subir"
     const val SUBIR_AYUDA = "Chrome se abre a la vista mientras sube."
     fun revisarAhora(modelo: String) =
@@ -170,6 +177,69 @@ object Textos {
     const val ABRIR_SUBIDOS = "Abrir subidos"
     const val ABRIR_ERRORES = "Abrir errores"
     fun verError(carpeta: String) = "Ver el error de $carpeta"
+    const val COMO_CARPETA = "¿Cómo tiene que ser una carpeta?"
+    // ------------------------------------------------------------ ventana Descripción
+    const val AGREGAR_DESCRIPCION = "Agregar descripción"
+    const val EDITAR_DESCRIPCION = "Editar descripción"
+    const val QUITAR_DESCRIPCION = "Quitar descripción"
+    const val BOTON_DESCRIPCION = "Descripción"
+    const val BOTON_EDITAR = "Editar"
+    const val BOTON_ELIMINAR = "Eliminar"
+    const val ELIMINAR_PREGUNTA = "¿Eliminarla?"
+    const val SI_ELIMINAR = "Sí, eliminar"
+    fun eliminadaPapelera(n: String) = "✔ $n eliminada: está en la papelera de Windows, por si la necesitas."
+    fun eliminadaEn(n: String, ruta: String) = "✔ $n quitada de pendientes: está en $ruta"
+    fun noSePuedeEliminar(n: String, motivo: String) =
+        "✘ No he podido eliminar $n: $motivo (¿la tienes abierta en el Explorador o en otro programa?)"
+    fun masProblemas(n: Int) = " (+$n más; pulsa la carpeta para verlos)"
+    fun tituloDescripcion(carpeta: String) = "Descripción de $carpeta"
+    const val CAMPO_TITULO = "Título"
+    const val CAMPO_ETIQUETAS = "Etiquetas"
+    const val ETIQUETAS_AYUDA = "Separadas por comas o una por línea"
+    const val CAMPO_LICENCIA = "Licencia"
+    const val CAMPO_CATEGORIA = "Categoría"
+    const val CAMPO_SUBCATEGORIA = "Subcategoría"
+    const val CAMPO_TIPO = "Tipo de impresión"
+    const val CAMPO_DESCRIPCION = "Descripción"
+    fun categoriaElegida(c: String) = "Categoría elegida: $c"
+    const val SIN_CATEGORIA = "Sin categoría elegida"
+    const val FALTAN_OPCIONES =
+        "Todavía faltan las listas completas de MakerOnline (salen del Diagnóstico del formulario). " +
+            "De momento solo están las opciones ya comprobadas y las que tenga la carpeta."
+    const val TEXTOS_COMPLETOS = "✔ Completo: se puede subir"
+    fun faltanTextos(campos: List<String>) = "Para poder subirlo falta: " + campos.joinToString(", ") +
+        ". Puedes guardar igual y terminarlo luego."
+    fun descripcionGuardada(carpeta: String, archivo: String) = "✔ Descripción de $carpeta guardada en $archivo"
+    // ------------------------------------------------------------ ventana Agregar / Editar modelo
+    const val AGREGAR_MODELO = "Agregar modelo"
+    const val BOTON_AGREGAR_MODELO = "+ Agregar modelo"
+    fun editarModelo(carpeta: String) = "Editar $carpeta"
+    const val IMAGEN = "Imagen (portada)"
+    const val MODELO = "Modelo (.3mf o .stl)"
+    const val SIN_IMAGEN = "Sin imagen. Arrástrala aquí o pulsa Elegir."
+    const val SIN_MODELO = "Sin modelo. Arrástralo aquí o pulsa Elegir."
+    const val SIN_DESCRIPCION = "Sin descripción."
+    const val ELEGIR = "Elegir…"
+    const val QUITAR_ARCHIVO = "Quitar"
+    const val ELEGIR_IMAGEN = "Elige la imagen del modelo"
+    const val ELEGIR_MODELO = "Elige el archivo del modelo"
+    const val FILTRO_IMAGEN = "Imágenes (.jpg, .png)"
+    const val FILTRO_MODELO = "Modelos (.3mf, .stl)"
+    const val NO_ES_IMAGEN = "Eso no es una imagen .jpg o .png."
+    const val NO_ES_MODELO = "Eso no es un archivo .3mf o .stl."
+    fun otrosArchivos(n: Int) = "La carpeta tiene $n imagen(es) o modelo(s) más: se quedan como están."
+    const val FALTA_IMAGEN = "imagen"
+    const val FALTA_MODELO = "modelo"
+    const val FALTA_DESCRIPCION = "descripción"
+    const val MODELO_COMPLETO = "✔ Completo: se puede subir"
+    fun faltaModelo(cosas: List<String>) = "Para poder subirlo falta: " + cosas.joinToString(", ") + ". Puedes guardar igual."
+    const val NOMBRE_CARPETA = "Nombre de la carpeta"
+    const val PIDE_NOMBRE = "¿Cómo se llama la carpeta? Escribe el nombre y pulsa Guardar otra vez."
+    const val NOMBRE_VACIO = "Escribe un nombre para la carpeta."
+    const val NOMBRE_CARACTERES = "El nombre no puede tener estos caracteres: \\ / : * ? \" < > |"
+    const val NOMBRE_PUNTO = "El nombre no puede acabar en punto."
+    fun nombreRepetido(n: String) = "Ya hay una carpeta \"$n\" en pendientes: elige otro nombre."
+    fun modeloGuardado(carpeta: String) = "✔ Guardado en pendientes/$carpeta"
     const val ERROR_SIN_CARPETA = "Elige una carpeta de la lista, o marca \"Todas las que están bien\"."
     const val ERROR_CARPETA_CON_PROBLEMAS = "La carpeta seleccionada tiene problemas: arréglalos antes de subirla."
     const val ERROR_NADA_PARA_SUBIR = "No hay ninguna carpeta lista para subir en pendientes."

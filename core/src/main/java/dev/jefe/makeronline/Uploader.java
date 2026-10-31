@@ -276,7 +276,15 @@ public class Uploader {
         cerrarCookies(page);
         paso("Licencia: " + meta.licenseOrDefault());
         licencia.click();
-        page.getByText(meta.licenseOrDefault()).first().click();
+        // El título exacto de la opción ("CC BY", "CC0"…); si no aparece (p. ej. "CC0 (aka CC Zero)" de los
+        // info.json antiguos, que es el principio de su descripción), lo que contenga ese texto, como antes
+        Locator opcion = page.getByText(meta.licenseOrDefault(), new Page.GetByTextOptions().setExact(true)).first();
+        try {
+            opcion.waitFor(new Locator.WaitForOptions().setTimeout(5_000));
+        } catch (TimeoutError e) {
+            opcion = page.getByText(meta.licenseOrDefault()).first();
+        }
+        opcion.click();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Submit")).click();
 
         // --- Portada ---
@@ -295,10 +303,11 @@ public class Uploader {
         titulo.fill(meta.title());
 
         // --- Categoría (2 niveles) ---
-        paso("Categoría: " + String.join(" > ", meta.category()));
+        List<String> categoria = meta.categoryOrDefault();
+        paso("Categoría: " + String.join(" > ", categoria) + (meta.sinCategoria() ? " (por defecto)" : ""));
         Locator selectorTipo = page.getByRole(AriaRole.TEXTBOX,
                 new Page.GetByRoleOptions().setName("First level classification/"));
-        Locator primerNivel = page.getByText(meta.category().get(0),
+        Locator primerNivel = page.getByText(categoria.get(0),
                 new Page.GetByTextOptions().setExact(true));
         // el desplegable a veces no abre con el primer clic: se reintenta
         for (int intento = 1; ; intento++) {
@@ -312,7 +321,7 @@ public class Uploader {
                 page.waitForTimeout(1000);
             }
         }
-        for (String nivel : meta.category()) {
+        for (String nivel : categoria) {
             page.getByText(nivel, new Page.GetByTextOptions().setExact(true)).click();
         }
 
@@ -523,7 +532,7 @@ public class Uploader {
      * En Windows no se puede mover una carpeta con archivos abiertos. Justo después de
      * cerrar la pestaña, Chrome puede tardar un momento en soltarlos: se reintenta unos segundos.
      */
-    static Path mover(Path dir, Path carpetaDestino) throws IOException {
+    public static Path mover(Path dir, Path carpetaDestino) throws IOException {
         Path destino = carpetaDestino.resolve(LocalDateTime.now().format(STAMP) + "_" + dir.getFileName());
         int n = 2;
         while (Files.exists(destino)) {

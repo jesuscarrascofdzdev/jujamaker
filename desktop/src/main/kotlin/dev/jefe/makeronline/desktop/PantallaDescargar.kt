@@ -43,7 +43,6 @@ import kotlinx.coroutines.launch
 fun PantallaDescargar(
     d: EstadoDescarga,
     e: EstadoEdicion,
-    carpetaDescargas: java.nio.file.Path,
     alcance: CoroutineScope,
 ) {
     // Cada vez que se abre la pantalla se vuelve a leer usuarios.json (por si lo has editado)
@@ -70,7 +69,7 @@ fun PantallaDescargar(
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Botones(d, alcance)
                 PanelProgreso(d)
-                PanelResumen(d, carpetaDescargas)
+                PanelResumen(d)
                 d.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 ListaMensajes(d.mensajes, Modifier.weight(1f))
             }
@@ -234,25 +233,31 @@ private fun PanelProgreso(d: EstadoDescarga) {
             Text(Textos.esperando(restante), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (d.parando) Text(Textos.PARANDO, color = MaterialTheme.colorScheme.error)
+        if (d.empaquetando) Text(Textos.CREANDO_ZIP, style = MaterialTheme.typography.titleSmall)
     }
 }
 
 @Composable
-private fun PanelResumen(d: EstadoDescarga, carpetaDescargas: java.nio.file.Path) {
-    val r = d.resumen ?: return
+private fun PanelResumen(d: EstadoDescarga) {
+    val r = d.resumen
+    val zip = d.zip
+    if (d.enMarcha || (r == null && zip == null && d.errorZip == null)) return
     Tarjeta {
-        when {
-            r.parado() -> Text(Textos.RESUMEN_PARADO, style = MaterialTheme.typography.titleSmall)
-            r.simulado() -> Text(Textos.RESUMEN_SIMULACION, style = MaterialTheme.typography.titleSmall)
+        if (r != null) {
+            when {
+                r.parado() -> Text(Textos.RESUMEN_PARADO, style = MaterialTheme.typography.titleSmall)
+                r.simulado() -> Text(Textos.RESUMEN_SIMULACION, style = MaterialTheme.typography.titleSmall)
+            }
+            if (!r.simulado()) Text(Textos.resumen(r.descargados(), r.soloLike(), r.yaTenianLike(), r.errores()))
         }
-        if (!r.simulado()) {
-            Text(Textos.resumen(r.descargados(), r.soloLike(), r.yaTenianLike(), r.errores()))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { abrir(carpetaDescargas) }) { Text(Textos.ABRIR_DESCARGAS) }
-                for (carpeta in r.carpetasConErrores()) {
-                    TextButton(onClick = { abrir(carpeta.resolve("errores.txt")) }) {
-                        Text(Textos.VER_ERRORES + " (" + carpeta.fileName + ")")
-                    }
+        // El zip con lo descargado (también si se ha parado o ha fallado a mitad)
+        if (zip != null) Text("✔ " + Textos.zipCreado(zip.fileName.toString(), d.modelosEnZip), color = VERDE)
+        d.errorZip?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (zip != null) Button(onClick = { mostrarArchivo(zip) }) { Text(Textos.MOSTRAR_ZIP) }
+            for (carpeta in r?.carpetasConErrores().orEmpty()) {
+                TextButton(onClick = { abrir(d.erroresDe(carpeta)) }) {
+                    Text(Textos.VER_ERRORES + " (" + carpeta.fileName + ")")
                 }
             }
         }
