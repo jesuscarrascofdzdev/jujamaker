@@ -9,9 +9,17 @@ import java.util.Properties
  * Si el archivo no existe o no se puede leer, se usan los valores de siempre.
  */
 class Ajustes(private val archivo: Path) {
-    private val valores = Properties().apply {
+    private val valores = Properties().apply { leer(this) }
+
+    /** Vuelve a leer el archivo (después de traer los datos de antes, ver EstadoDatos). */
+    fun recargar() {
+        valores.clear()
+        leer(valores)
+    }
+
+    private fun leer(p: Properties) {
         try {
-            if (Files.exists(archivo)) Files.newBufferedReader(archivo, Charsets.UTF_8).use { load(it) }
+            if (Files.exists(archivo)) Files.newBufferedReader(archivo, Charsets.UTF_8).use { p.load(it) }
         } catch (_: Exception) {
             // archivo dañado: valores de siempre
         }

@@ -52,6 +52,11 @@ class EstadoDescarga(
         ajustes.incluirCreador = incluir
     }
 
+    /** Vuelve a coger lo que se recuerda (después de traer los datos de antes). */
+    fun cargarAjustes() {
+        incluirCreador = ajustes.incluirCreador
+    }
+
     // ------------------------------------------------------------ opciones (como en la terminal)
 
     /** Cuántos de los últimos modelos de cada usuario se miran (texto del campo). */

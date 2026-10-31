@@ -3,7 +3,6 @@ package dev.jefe.makeronline
 import com.microsoft.playwright.BrowserContext
 import com.microsoft.playwright.Locator
 import com.microsoft.playwright.Page
-import com.microsoft.playwright.Playwright
 import com.microsoft.playwright.Response
 import com.microsoft.playwright.TimeoutError
 import com.microsoft.playwright.options.AriaRole
@@ -51,7 +50,7 @@ object DiagnosticoFormulario {
         if (!Files.isDirectory(rutas.perfilChrome)) {
             throw AgenteException("No hay sesión guardada. Inicia sesión primero (app: pantalla Sesión).")
         }
-        val texto = Playwright.create().use { pw ->
+        val texto = Browsers.playwright().use { pw ->
             Browsers.openChrome(pw, rutas.perfilChrome, 0.0).use { ctx -> informe(ctx, progreso) }
         }
         val salida = rutas.datos.resolve("diagnostico-formulario.txt")

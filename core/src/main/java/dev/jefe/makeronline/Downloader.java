@@ -273,7 +273,7 @@ public class Downloader {
         Estado est = new Estado(op.max());
         leerRegistro();
 
-        try (Playwright pw = Playwright.create();
+        try (Playwright pw = Browsers.playwright();
              BrowserContext ctx = Browsers.openChrome(pw, rutas.getPerfilChrome(), op.modo() == Modo.VISIBLE ? 100 : 0,
                      op.modo() == Modo.SIN_VENTANA, op.modo() == Modo.APARTADA)) {
             ctx.setDefaultTimeout(30_000);

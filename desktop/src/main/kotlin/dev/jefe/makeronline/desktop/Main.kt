@@ -1,9 +1,13 @@
 package dev.jefe.makeronline.desktop
 
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import javax.imageio.ImageIO
 import javax.swing.UIManager
 
 fun main() {
@@ -14,6 +18,7 @@ fun main() {
         // si no se puede, se ve con el aspecto de Java: funciona igual
     }
     val app = EstadoApp(EstadoApp.rutas())
+    val icono = cargarIcono()
     application {
         Window(
             onCloseRequest = {
@@ -21,9 +26,18 @@ fun main() {
                 exitApplication()
             },
             title = Textos.TITULO_APP,
+            icon = icono,
             state = rememberWindowState(width = 1100.dp, height = 760.dp),
         ) {
             App(app)
         }
     }
+}
+
+/** El icono de la ventana y de la barra de tareas (src/main/resources/icono.png). Si no está, el de Java. */
+private fun cargarIcono(): Painter? = try {
+    EstadoApp::class.java.getResourceAsStream("/icono.png")?.use { ImageIO.read(it) }
+        ?.let { BitmapPainter(it.toComposeImageBitmap()) }
+} catch (_: Exception) {
+    null
 }

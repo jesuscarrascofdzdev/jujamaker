@@ -16,7 +16,7 @@ public class SaveSession {
         Rutas rutas = Rutas.carpetaActual();
         Progreso progreso = new ProgresoConsola();
         try (AgentLock lock = AgentLock.acquire(rutas.getCandado(), "SaveSession", false, progreso);
-             Playwright pw = Playwright.create();
+             Playwright pw = Browsers.playwright();
              BrowserContext ctx = Browsers.openChrome(pw, rutas.getPerfilChrome(), 0)) {
             Page page = ctx.pages().isEmpty() ? ctx.newPage() : ctx.pages().get(0);
             page.navigate("https://www.makeronline.com/en/");

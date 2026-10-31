@@ -6,7 +6,7 @@ App de escritorio para subir y descargar modelos 3D de [MakerOnline](https://www
 - La sesión de MakerOnline (perfil de Chrome) **nunca sale de tu ordenador**.
 - Los captchas **no se saltan**: se enseña la ventana para que los resuelva la persona.
 
-> **Estado: fase 3 en curso (3a: pantalla Subir con carpetas).** Fases 1 y 2 terminadas. El código de la herramienta de terminal está en el módulo `core` y se está preparando para usarlo desde la app (hechos: 1a, las rutas están en `Rutas`; 1b, `core` avisa de lo que hace con `Progreso`, y el Uploader espera a que terminen las subidas y confirma el borrador; 1c, se puede parar sin dejar nada a medias; 1d, `--revisar` sin Inspector). La app ya tiene menú y las pantallas Sesión, Subir (arrastrando carpetas de modelos) y Descargar, esta con un botón Editar para añadir y quitar usuarios de la lista. Al descargar toda la lista, la cuenta del creador de la app (juji-nya) va siempre la primera: viene marcada y se puede desmarcar, pero no quitar.
+> **Estado: fase 4 en curso (4a: la app guarda sus datos en su propia carpeta).** Fases 1, 2 y 3 terminadas. La app tiene menú y las pantallas Sesión, Subir (agregar, editar, eliminar y subir modelos, con su descripción) y Descargar (con la lista de usuarios y un zip en el escritorio al terminar). Al descargar toda la lista, la cuenta del creador de la app (juji-nya) va siempre la primera: viene marcada y se puede desmarcar, pero no quitar.
 
 ---
 
@@ -44,7 +44,9 @@ Arriba a la derecha, en el desplegable de ejecución, está la carpeta **MakerOn
 | Subir | Sube los modelos de `subidas/pendientes/` como borrador |
 | Codegen | Chrome con sesión y el Playwright Inspector, para grabar selectores |
 | Diagnóstico del formulario | Abre el formulario de subida y apunta en `diagnostico-formulario.txt` las licencias, categorías y tipos de impresión que ofrece la web, y de qué peticiones salen. No sube ni guarda nada |
-| App de escritorio | Abre la app: pantallas Sesión, Subir (agregar, editar o eliminar modelos, escribir su descripción, arrastrar carpetas, subir, revisar con botones y parar) y Descargar (simular, descargar, parar con un botón y editar la lista de usuarios; al terminar deja lo descargado en un zip en el escritorio, `makeronline-31-10-2026.zip`, o `… (2).zip` si ya hay uno de ese día). Usa la misma carpeta de datos que los programas de terminal (la raíz del repo), así que comparte la sesión, `usuarios.json` y `descargados.txt` |
+| App de escritorio | Abre la app: pantallas Sesión, Subir (agregar, editar o eliminar modelos, escribir su descripción, arrastrar carpetas, subir, revisar con botones y parar) y Descargar (simular, descargar, parar con un botón y editar la lista de usuarios; al terminar deja lo descargado en un zip en el escritorio, `makeronline-31-10-2026.zip`, o `… (2).zip` si ya hay uno de ese día). Guarda sus datos en su propia carpeta (ver abajo), no en la del proyecto |
+| Probar la app empaquetada | Abre la app tal como quedará instalada (con su propio Java dentro), sin instalarla |
+| Crear instalador | Crea el instalador de Windows (ver "Crear el instalador") |
 
 **Cómo preparar un modelo para subir:** una carpeta por modelo dentro de `subidas/pendientes/`. Los nombres de los archivos dan igual:
 - al menos un modelo, `.3mf` o `.stl`;
@@ -66,11 +68,24 @@ De momento se suben la portada y un modelo por zona; si hay más imágenes o mod
 
 **Para parar Descargar o Subir sin dejar nada a medias**, escribe `parar` en la consola y pulsa ENTER. El Downloader termina el modelo que esté bajando y no empieza otro; el Uploader no guarda el borrador que tenga a medias, que se queda en `pendientes/`. El botón *Stop* de IntelliJ, en cambio, lo corta en seco.
 
-Los programas de terminal se ejecutan desde la raíz del repo. Ahí se crean `chrome-profile/`, `usuarios.json` (y `usuarios.json.bak`, la copia que guarda la app antes de cambiarlo por primera vez), `descargados.txt`, `ajustes.properties` (lo que recuerda la app), `subidas/` y `modelos-descargados/` (donde descarga la terminal). La app descarga en `descarga-en-curso/`, que vacía al crear el zip, y guarda los errores de las descargas en `errores-descargas/`. **Nada de eso se sube a git.**
+**Dónde se guardan los datos**
+- **La app** usa su propia carpeta: `%LOCALAPPDATA%\MakerOnline Desktop` (por ejemplo `C:\Users\<tú>\AppData\Local\MakerOnline Desktop`). Ahí están `chrome-profile/` (la sesión), `usuarios.json` (y `usuarios.json.bak`, la copia que guarda antes de cambiarlo por primera vez), `descargados.txt`, `ajustes.properties`, `subidas/`, `descarga-en-curso/` (se vacía al crear el zip) y `errores-descargas/`. La ruta se ve abajo del todo en la pantalla Sesión, con un botón para abrirla.
+- **Traer los datos de antes:** si la app se abre desde IntelliJ y su carpeta todavía está vacía, la pantalla Sesión ofrece traer lo que hay en la carpeta del proyecto (sesión de Chrome, lista de usuarios, `descargados.txt`, ajustes y carpetas de subidas). Solo copia: en la carpeta del proyecto no se borra nada. Con "Traer de otra carpeta…" se puede traer de cualquier otra.
+- **Los programas de terminal** siguen usando la carpeta desde la que se lanzan (la raíz del repo) y descargan en `modelos-descargados/`. Ya no comparten la sesión ni las listas con la app.
+- Para que la app use otra carpeta: `-Dmakeronline.datos=<carpeta>` (ver `desktop/build.gradle.kts`).
+- **Nada de eso se sube a git.**
+
+**Crear el instalador**
+1. En el desplegable de ejecución, elige **Crear instalador** y pulsa ▶. La primera vez tarda: descarga WiX (lo que hace instaladores de Windows).
+2. El instalador queda en `desktop/build/compose/binaries/main/exe/MakerOnline Desktop-1.0.0.exe` (y el `.msi`, con *Gradle → desktop → compose desktop → packageMsi*, en `…/main/msi/`).
+3. Se instala sin pedir permisos de administrador, solo para ese usuario, en `%LOCALAPPDATA%\Programs\MakerOnline Desktop`, con acceso directo en el escritorio y en el menú Inicio. Lleva Java dentro: quien lo instala solo necesita Google Chrome.
+   - Los datos van aparte, en `%LOCALAPPDATA%\MakerOnline Desktop`: al desinstalar o actualizar, Windows borra entera la carpeta de instalación, pero no la de datos. Por eso la app nunca guarda datos dentro de la carpeta donde está instalada (`CarpetaDatos.elegida`).
+4. Para una versión nueva, sube `packageVersion` en `desktop/build.gradle.kts` (1.0.1, 1.1.0…): el instalador nuevo sustituye al anterior y los datos (la carpeta de datos) se quedan.
 
 **Desde la terminal (opcional)**
 - Compilar todo: `gradlew build`
 - Abrir la app: `gradlew :desktop:run`
+- Crear el instalador: `gradlew :desktop:packageExe` (o `packageMsi`)
 
 ---
 
@@ -93,7 +108,9 @@ Los programas de terminal se ejecutan desde la raíz del repo. Ahí se crean `ch
   - Cada pantalla tiene su estado (`EstadoSesion`, `EstadoDescarga`) con funciones `suspend`: el trabajo va al hilo del navegador y el estado se cambia al volver, en el hilo de la ventana. Se lanzan con el `CoroutineScope` de `App`, no con el de cada pantalla, para que sigan al cambiar de pantalla.
   - `Ocupacion` dice qué está haciendo Chrome; la comparten todas las pantallas y solo deja empezar una tarea a la vez.
   - `ProgresoApp` convierte los avisos de `Progreso` en `Evento`s y los pasa al hilo de la ventana, en orden.
-  - La carpeta de datos llega por la propiedad `makeronline.datos`, que pone la tarea `run` de Gradle; en la fase 4 será la carpeta del usuario.
+  - `CarpetaDatos`: la carpeta de datos de la app (`%LOCALAPPDATA%\MakerOnline Desktop`, o la de `-Dmakeronline.datos`). La tarea `run` pasa la raíz del repo en `makeronline.datosAnteriores` para que Sesión ofrezca traer de ahí los datos (`TraerDatos`, estado en `EstadoDatos`): copia sin machacar, junta `usuarios.json` y `descargados.txt`, y copia el perfil de Chrome sin cachés a una carpeta aparte que renombra al final. Coge el candado de las dos carpetas.
+  - Instalador: `compose.desktop.application.nativeDistributions` en `desktop/build.gradle.kts` (exe y msi, por usuario, con todo el Java dentro y `upgradeUuid` fijo). `javaHome` es el JDK 21 del toolchain, que trae jpackage. El icono está en `desktop/icono.ico` (instalador) y `desktop/src/main/resources/icono.png` (ventana).
+  - `core/Browsers.playwright()` arranca Playwright con `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`: se usa el Chrome instalado y así no se descargan los navegadores de Playwright (unos 400 MB) la primera vez.
   - `core/Sesion` comprueba la sesión (cookie `mo_access_token` + `api/user/personal/info`) y abre Chrome para iniciarla.
   - `core/ListaUsuarios` lee y guarda `usuarios.json` (lo usan el Downloader y la app) y saca un nombre legible de cada entrada (`"Nombre · URL-del-perfil"`, `"@usuario / Nombre"`…). Al guardar reescribe el archivo entero; antes, si no existe, copia el original en `usuarios.json.bak`.
   - `core/BuscadorUsuarios` encuentra a un usuario por la URL de su perfil (`window.__NUXT__.data[0].userInfo`) o por el buscador (`api/search/user`). Lo usan el Downloader y `Sesion.buscarUsuario`, que es lo que llama la app al añadir a alguien; la app lo guarda como `"Nombre · URL-del-perfil"`. `core/Api` hace las peticiones a la API con el token de la sesión.

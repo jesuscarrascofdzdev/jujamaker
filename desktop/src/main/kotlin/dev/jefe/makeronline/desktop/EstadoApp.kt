@@ -4,7 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.jefe.makeronline.Rutas
-import java.nio.file.Path
+import java.nio.file.Files
 
 /** Las pantallas del menú lateral. */
 enum class Pantalla(val titulo: String) {
@@ -28,6 +28,14 @@ class EstadoApp(val rutas: Rutas) {
     val descarga = EstadoDescarga(rutas, hilo, ocupacion, ajustes)
     /** La ventana de añadir y quitar usuarios (botón "Editar" de Descargar). */
     val edicion = EstadoEdicion(rutas, hilo, ocupacion, descarga)
+    /** Traer los datos de antes (pantalla Sesión). Después, todo se vuelve a leer. */
+    val datos = EstadoDatos(rutas, hilo, ocupacion) { sesionTraida ->
+        ajustes.recargar()
+        descarga.cargarAjustes()
+        descarga.cargarLista()
+        subida.cargar()
+        if (sesionTraida) sesion.comprobar()
+    }
 
     var pantalla by mutableStateOf(Pantalla.SESION)
 
@@ -40,13 +48,15 @@ class EstadoApp(val rutas: Rutas) {
     }
 
     companion object {
-        /**
-         * Propiedad con la carpeta de datos. Durante la fase 2 la pone la tarea "run" de Gradle
-         * (ver desktop/build.gradle.kts) con la raíz del repo, para compartir la sesión,
-         * usuarios.json y descargados.txt con los programas de terminal.
-         */
-        private const val PROPIEDAD_DATOS = "makeronline.datos"
-
-        fun rutas(): Rutas = Rutas(Path.of(System.getProperty(PROPIEDAD_DATOS) ?: "").toAbsolutePath())
+        /** Las rutas de la app, dentro de su carpeta de datos (ver [CarpetaDatos]), que se crea si no existe. */
+        fun rutas(): Rutas {
+            val datos = CarpetaDatos.elegida()
+            try {
+                Files.createDirectories(datos)
+            } catch (_: Exception) {
+                // si no se puede crear, cada pantalla dará su error al intentar usarla
+            }
+            return Rutas(datos)
+        }
     }
 }

@@ -22,7 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
-fun PantallaSesion(s: EstadoSesion, carpetaDatos: String, alcance: CoroutineScope) {
+fun PantallaSesion(s: EstadoSesion, d: EstadoDatos, alcance: CoroutineScope) {
     // La primera vez que se abre la pantalla, se comprueba la sesión
     LaunchedEffect(Unit) {
         if (s.estado == null) alcance.launch { s.comprobar() }
@@ -36,6 +36,29 @@ fun PantallaSesion(s: EstadoSesion, carpetaDatos: String, alcance: CoroutineScop
         Text(Textos.SESION_EXPLICACION, style = MaterialTheme.typography.bodyMedium)
 
         val e = s.estado
+
+        // --- Traer los datos de antes (solo si los hay y la app todavía no tiene nada) ---
+        d.sugerida?.let { anterior ->
+            Tarjeta {
+                Text(Textos.TRAER_TITULO, style = MaterialTheme.typography.titleMedium)
+                Text(Textos.traerExplicacion(anterior.toString()), style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(enabled = d.libre, onClick = { alcance.launch { d.traer(anterior) } }) {
+                        Text(Textos.TRAER)
+                    }
+                    OutlinedButton(enabled = d.libre, onClick = { traerDeOtra(d, alcance) }) {
+                        Text(Textos.TRAER_DE_OTRA)
+                    }
+                }
+            }
+        }
+        if (d.trayendo) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text(Textos.TRAYENDO)
+        }
+        d.resumen?.let { Text(it, color = VERDE) }
+        for (aviso in d.avisos) Text("⚠ $aviso", color = MaterialTheme.colorScheme.error)
+        d.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         // --- Chrome ---
         Tarjeta {
@@ -93,12 +116,25 @@ fun PantallaSesion(s: EstadoSesion, carpetaDatos: String, alcance: CoroutineScop
         if (s.ocupado) LinearProgressIndicator(Modifier.fillMaxWidth())
         s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
+        // --- Dónde guarda la app sus datos ---
         Text(
-            Textos.carpetaDatos(carpetaDatos),
+            Textos.carpetaDatos(d.carpeta.toString()),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp),
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { abrir(d.carpeta) }) { Text(Textos.ABRIR_CARPETA_DATOS) }
+            if (d.sugerida == null) {
+                TextButton(enabled = d.libre, onClick = { traerDeOtra(d, alcance) }) { Text(Textos.TRAER_DE_OTRA) }
+            }
+        }
     }
+}
+
+/** Elige la carpeta donde estaban los datos (la que tiene chrome-profile y usuarios.json) y los trae. */
+private fun traerDeOtra(d: EstadoDatos, alcance: CoroutineScope) {
+    val elegida = elegirCarpetas(Textos.ELEGIR_CARPETA_ANTERIOR).firstOrNull() ?: return
+    alcance.launch { d.traer(elegida) }
 }
 

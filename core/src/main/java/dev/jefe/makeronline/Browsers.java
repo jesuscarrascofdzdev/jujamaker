@@ -4,7 +4,9 @@ import com.microsoft.playwright.*;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Abre tu Google Chrome real (no el Chromium de Playwright) con un perfil
@@ -22,6 +24,17 @@ import java.util.List;
 public final class Browsers {
 
     private Browsers() {}
+
+    /**
+     * Arranca Playwright sin descargar sus propios navegadores (Chromium, Firefox y WebKit,
+     * unos 400 MB): aquí siempre se usa el Google Chrome instalado (ver setChannel("chrome")).
+     * Sin esto, la primera vez que alguien abre la app instalada se los bajaría sin avisar.
+     */
+    public static Playwright playwright() {
+        Map<String, String> env = new HashMap<>();
+        env.put("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1");
+        return Playwright.create(new Playwright.CreateOptions().setEnv(env));
+    }
 
     /** Chrome con ventana normal (Uploader, SaveSession, Codegen). */
     public static BrowserContext openChrome(Playwright pw, Path perfil, double slowMoMs) {

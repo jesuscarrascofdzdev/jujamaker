@@ -38,6 +38,36 @@ object Textos {
     const val YA_HE_ENTRADO = "Ya he entrado"
     const val CANCELAR = "Cancelar"
     fun carpetaDatos(ruta: String) = "Carpeta de datos: $ruta"
+    const val ABRIR_CARPETA_DATOS = "Abrir"
+
+    // ------------------------------------------------------------ traer los datos de antes
+    const val TRAER_TITULO = "Traer tus datos de antes"
+    fun traerExplicacion(ruta: String) =
+        "Hay datos de MakerOnline Desktop en $ruta. Ahora la app guarda todo en su propia carpeta. " +
+            "Tráelos para seguir con tu sesión, tu lista de usuarios, lo ya descargado y tus carpetas " +
+            "de subidas. Solo se copian: allí no se borra nada."
+    const val TRAER = "Traer mis datos"
+    const val TRAER_DE_OTRA = "Traer de otra carpeta…"
+    const val ELEGIR_CARPETA_ANTERIOR = "Elige la carpeta donde estaban tus datos (la que tiene chrome-profile y usuarios.json)"
+    const val TRAYENDO = "Copiando tus datos… (la sesión de Chrome puede tardar un poco)"
+    const val TRAER_MISMA = "Esa es la carpeta de datos que ya usa la app: no hay nada que traer."
+    fun traerNada(ruta: String) =
+        "En $ruta no hay datos de MakerOnline Desktop (ni chrome-profile, ni usuarios.json, ni descargados.txt, ni subidas)."
+    const val TRAIDO_SESION = "la sesión de Chrome"
+    fun traidosUsuarios(n: Int) = if (n == 1) "1 usuario de la lista" else "$n usuarios de la lista"
+    fun traidosDescargados(n: Int) = if (n == 1) "1 modelo ya descargado" else "$n modelos ya descargados"
+    const val TRAIDOS_AJUSTES = "los ajustes"
+    fun traidasSubidas(n: Int) = if (n == 1) "1 carpeta de subidas" else "$n carpetas de subidas"
+    const val TRAER_NADA_NUEVO = "No había nada nuevo que traer: la app ya lo tenía todo."
+    fun traidoResumen(cosas: List<String>) = "✔ Traído: " + cosas.joinToString(", ") + "."
+    const val TRAER_YA_HAY_SESION =
+        "La sesión de Chrome no se ha traído porque la app ya tiene una. Si no funciona, usa \"Volver a iniciar sesión\"."
+    fun traerSinSesion(motivo: String) =
+        "No se ha podido copiar la sesión de Chrome ($motivo). Cierra Chrome si estaba abierto y vuelve a " +
+            "probar, o inicia sesión otra vez con el botón de arriba."
+    fun traerSinLista(motivo: String) = "La lista de usuarios no se ha traído: $motivo"
+    fun subidasRepetidas(n: Int) =
+        "$n carpeta(s) de subidas no se han traído porque la app ya tiene una con el mismo nombre."
 
     // ------------------------------------------------------------ tareas (se ven en el menú)
     const val TAREA_COMPROBANDO = "Comprobando la sesión…"
@@ -46,6 +76,7 @@ object Textos {
     const val TAREA_DESCARGANDO = "Descargando…"
     const val TAREA_BUSCANDO_USUARIO = "Buscando un usuario…"
     const val TAREA_SUBIENDO = "Subiendo…"
+    const val TAREA_TRAYENDO = "Trayendo tus datos…"
 
     // ------------------------------------------------------------ descargar
     const val DESCARGAR_TITULO = "Descargar"

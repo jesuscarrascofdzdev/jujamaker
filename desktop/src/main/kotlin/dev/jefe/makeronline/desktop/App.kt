@@ -41,7 +41,7 @@ fun App(app: EstadoApp) {
                 Box(Modifier.width(1.dp).fillMaxHeight().background(MaterialTheme.colorScheme.outlineVariant))
                 Box(Modifier.weight(1f).fillMaxHeight()) {
                     when (app.pantalla) {
-                        Pantalla.SESION -> PantallaSesion(app.sesion, app.rutas.datos.toString(), alcance)
+                        Pantalla.SESION -> PantallaSesion(app.sesion, app.datos, alcance)
                         Pantalla.SUBIR -> PantallaSubir(app.subida, app.rutas, alcance)
                         Pantalla.DESCARGAR -> PantallaDescargar(app.descarga, app.edicion, alcance)
                     }

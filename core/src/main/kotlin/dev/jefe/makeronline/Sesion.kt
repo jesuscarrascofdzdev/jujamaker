@@ -72,7 +72,7 @@ class Sesion(private val rutas: Rutas) {
             return Estado(chromeInstalado = true, iniciada = false, motivo = "todavía no has iniciado sesión")
         }
         AgentLock.acquire(rutas.candado, "MakerOnline Desktop (comprobando la sesión)", false, progreso).use {
-            Playwright.create().use { pw ->
+            Browsers.playwright().use { pw ->
                 Browsers.openChrome(pw, rutas.perfilChrome, 0.0, true, false).use { ctx ->
                     val token = token(ctx)
                         ?: return Estado(chromeInstalado = true, iniciada = false, motivo = "no hay sesión iniciada")
@@ -100,7 +100,7 @@ class Sesion(private val rutas: Rutas) {
         val candado = AgentLock.acquire(rutas.candado, "MakerOnline Desktop (iniciando sesión)", false, progreso)
         var pw: Playwright? = null
         try {
-            pw = Playwright.create()
+            pw = Browsers.playwright()
             val ctx = Browsers.openChrome(pw, rutas.perfilChrome, 0.0)
             val page = if (ctx.pages().isEmpty()) ctx.newPage() else ctx.pages()[0]
             page.navigate("$WEB/en/")
@@ -123,7 +123,7 @@ class Sesion(private val rutas: Rutas) {
     fun buscarUsuario(entrada: String, progreso: Progreso): Busqueda {
         if (!Files.isDirectory(rutas.perfilChrome)) throw AgenteException(SIN_SESION)
         AgentLock.acquire(rutas.candado, "MakerOnline Desktop (buscando un usuario)", false, progreso).use {
-            Playwright.create().use { pw ->
+            Browsers.playwright().use { pw ->
                 Browsers.openChrome(pw, rutas.perfilChrome, 0.0, true, false).use { ctx ->
                     ctx.setDefaultTimeout(30_000.0)
                     val token = token(ctx) ?: throw AgenteException(SIN_SESION)

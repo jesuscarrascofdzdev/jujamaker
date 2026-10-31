@@ -174,7 +174,7 @@ public class Uploader {
         // 2) Subir los válidos
         int ok = 0, ko = 0, sinSubir = 0;
         boolean parado = false;
-        try (Playwright pw = Playwright.create();
+        try (Playwright pw = Browsers.playwright();
              BrowserContext ctx = Browsers.openChrome(pw, rutas.getPerfilChrome(), 150)) {
             ctx.setDefaultTimeout(30_000);
 
@@ -278,11 +278,13 @@ public class Uploader {
         licencia.click();
         // El título exacto de la opción ("CC BY", "CC0"…); si no aparece (p. ej. "CC0 (aka CC Zero)" de los
         // info.json antiguos, que es el principio de su descripción), lo que contenga ese texto, como antes
-        Locator opcion = page.getByText(meta.licenseOrDefault(), new Page.GetByTextOptions().setExact(true)).first();
+        Locator opcion = page.getByText(meta.licenseOrDefault(), new Page.GetByTextOptions().setExact(true))
+                .locator("visible=true").first();
         try {
             opcion.waitFor(new Locator.WaitForOptions().setTimeout(5_000));
         } catch (TimeoutError e) {
-            opcion = page.getByText(meta.licenseOrDefault()).first();
+            opcion = page.getByText(meta.licenseOrDefault())
+                    .locator("visible=true").first();
         }
         opcion.click();
         page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Submit")).click();
