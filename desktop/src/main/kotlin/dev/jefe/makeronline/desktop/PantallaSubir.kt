@@ -172,12 +172,13 @@ private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope) {
         Eleccion(Textos.SOLO_LA_SELECCIONADA, s.soloSeleccionada, editable && s.seleccionada != null) {
             s.soloSeleccionada = true
         }
+        Casilla(Textos.VER_CHROME_AL_SUBIR, s.verChrome, editable) { s.cambiarVerChrome(it) }
         Casilla(Textos.REVISAR, s.revisar, editable) { s.revisar = it }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BotonPrincipal(Textos.SUBIR, { alcance.launch { s.subir() } }, Modifier.weight(1f), enabled = s.libre && !s.copiando)
             BotonParar(Textos.PARAR, { s.parar() }, enabled = s.enMarcha && !s.parando)
         }
-        Text(Textos.SUBIR_AYUDA, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+        Text(Textos.subirAyuda(s.verChrome, s.revisar), style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
     }
 }
 

@@ -34,6 +34,10 @@ import java.util.stream.Stream;
  *   nombre ...  solo procesa esas carpetas de pendientes/ (sin nombres, todas).
  *               Ejemplo: --revisar llavero-gato
  *
+ * En la terminal Chrome siempre se ve. En la app se puede quitar "Ver Chrome mientras sube":
+ * entonces la ventana trabaja fuera de la pantalla (como en el Downloader) y solo aparece
+ * para revisar cada borrador.
+ *
  * Para pararlo sin dejar nada a medias: escribir "parar" y ENTER en la consola. Lo que
  * no se haya guardado se queda en pendientes/.
  */
@@ -52,8 +56,10 @@ public class Uploader {
      * @param revisar  se para justo antes de guardar cada borrador (--revisar)
      * @param carpetas solo estas carpetas de pendientes/; vacía = todas
      * @param esperar  si otro programa del agente está en marcha, espera a que termine (--esperar)
+     * @param verChrome true = ventana de Chrome a la vista todo el rato (en la terminal, siempre);
+     *                  false = fuera de la pantalla, y aparece solo para revisar cada borrador
      */
-    public record Opciones(boolean revisar, List<String> carpetas, boolean esperar) {}
+    public record Opciones(boolean revisar, List<String> carpetas, boolean esperar, boolean verChrome) {}
 
     /**
      * Cómo ha ido una ejecución.
@@ -116,7 +122,8 @@ public class Uploader {
         return new Opciones(
                 lista.contains("--revisar"),
                 lista.stream().filter(a -> !a.startsWith("--")).toList(), // nombres de carpeta
-                lista.contains("--esperar"));
+                lista.contains("--esperar"),
+                true); // en la terminal Chrome siempre se ve
     }
 
     /**
@@ -174,8 +181,13 @@ public class Uploader {
         // 2) Subir los válidos
         int ok = 0, ko = 0, sinSubir = 0;
         boolean parado = false;
+        if (!op.verChrome()) {
+            progreso.paso("Chrome se abre fuera de la pantalla"
+                    + (op.revisar() ? "; aparecerá para que revises cada borrador" : ""));
+        }
+        Downloader.Modo modo = op.verChrome() ? Downloader.Modo.VISIBLE : Downloader.Modo.APARTADA;
         try (Playwright pw = Browsers.playwright();
-             BrowserContext ctx = Browsers.openChrome(pw, rutas.getPerfilChrome(), 150)) {
+             BrowserContext ctx = Browsers.openChrome(pw, rutas.getPerfilChrome(), 150, false, !op.verChrome())) {
             ctx.setDefaultTimeout(30_000);
 
             for (int i = 0; i < listos.size() && !parado; i++) {
@@ -187,9 +199,11 @@ public class Uploader {
                 ModelFolder m = listos.get(i);
                 progreso.modelo(i + 1, listos.size(), m.name());
                 Page page = ctx.newPage();
+                // Fuera de la pantalla, cada pestaña nueva se aparta también (por si Chrome la abre en otra ventana)
+                Downloader.Ventana ventana = new Downloader.Ventana(modo, ctx, page, progreso);
                 boolean guardado = false;
                 try {
-                    subir(page, m, op.revisar());
+                    subir(page, m, op.revisar(), ventana);
                     guardado = true;
                     captura(page, m.dir().resolve("resultado.png"));
                 } catch (CanceladoException e) {
@@ -254,7 +268,7 @@ public class Uploader {
      * @throws CanceladoException si se pide parar antes de guardar (no se guarda nada)
      * @throws ModeloDescartado   si al revisar la persona decide no guardarlo
      */
-    private void subir(Page page, ModelFolder m, boolean revisar) {
+    private void subir(Page page, ModelFolder m, boolean revisar, Downloader.Ventana ventana) {
         ModelMeta meta = m.meta();
         for (String aviso : m.avisos()) progreso.nota(aviso);
         // Se crea antes de elegir ningún archivo para que vea todas las subidas.
@@ -401,7 +415,17 @@ public class Uploader {
         // --- Esperar a que TODO esté subido (si algo falla o se atasca, no se guarda) ---
         subidas.esperar("los archivos");
 
-        if (revisar && !revision.confirmar(m.name())) throw new ModeloDescartado();
+        if (revisar) {
+            // Si Chrome está fuera de la pantalla, se trae para que mires el formulario y luego se vuelve a apartar
+            ventana.mostrar();
+            boolean guardar;
+            try {
+                guardar = revision.confirmar(m.name());
+            } finally {
+                ventana.apartar();
+            }
+            if (!guardar) throw new ModeloDescartado();
+        }
 
         // --- Guardar como borrador ---
         // Último punto seguro: una vez pulsado "Save to draft" ya no se para hasta confirmarlo

@@ -236,7 +236,12 @@ object Textos {
     const val SOLO_LA_SELECCIONADA = "Solo la seleccionada"
     const val REVISAR = "Revisar antes de guardar"
     const val SUBIR = "Subir"
-    const val SUBIR_AYUDA = "Chrome se abre a la vista mientras sube."
+    const val VER_CHROME_AL_SUBIR = "Ver Chrome mientras sube"
+    fun subirAyuda(verChrome: Boolean, revisar: Boolean) = when {
+        verChrome -> "Chrome se abre a la vista mientras sube."
+        revisar -> "Chrome trabaja fuera de la pantalla y aparece para que revises cada borrador."
+        else -> "Chrome trabaja fuera de la pantalla: no lo verás."
+    }
     fun revisarAhora(modelo: String) =
         "Revisa el formulario de $modelo en la ventana de Chrome. Cuando lo hayas mirado, elige aquí:"
     const val GUARDAR_BORRADOR = "Guardar borrador"

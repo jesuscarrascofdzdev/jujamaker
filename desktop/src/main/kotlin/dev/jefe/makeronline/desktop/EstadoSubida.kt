@@ -49,6 +49,7 @@ class EstadoSubida(
     private val rutas: Rutas,
     private val hilo: HiloNavegador,
     private val ocupacion: Ocupacion,
+    private val ajustes: Ajustes,
 ) {
     // ------------------------------------------------------------ carpetas de pendientes/
 
@@ -73,6 +74,20 @@ class EstadoSubida(
 
     /** Parar antes de guardar cada borrador para mirarlo en Chrome (el --revisar de la terminal). */
     var revisar by mutableStateOf(false)
+
+    /** Ventana de Chrome a la vista mientras sube; si no, trabaja fuera de la pantalla. Se recuerda. */
+    var verChrome by mutableStateOf(ajustes.verChromeAlSubir)
+        private set
+
+    fun cambiarVerChrome(ver: Boolean) {
+        verChrome = ver
+        ajustes.verChromeAlSubir = ver
+    }
+
+    /** Vuelve a coger lo que se recuerda (después de traer los datos de antes). */
+    fun cargarAjustes() {
+        verChrome = ajustes.verChromeAlSubir
+    }
 
     // ------------------------------------------------------------ ejecución
 
@@ -344,7 +359,7 @@ class EstadoSubida(
         cancelacion = c
         val r = RevisionApp(c) { porRevisar = it }
         revision = r
-        val opciones = Uploader.Opciones(revisar, nombres, false)
+        val opciones = Uploader.Opciones(revisar, nombres, false, verChrome)
         try {
             resumen = hilo.ejecutar {
                 // Solo un programa con Chrome a la vez: comparten chrome-profile/ con la terminal

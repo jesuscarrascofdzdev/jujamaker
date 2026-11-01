@@ -41,6 +41,14 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
+    /** Si en Subir se ve la ventana de Chrome mientras sube (por defecto, sí). */
+    var verChromeAlSubir: Boolean
+        get() = valores.getProperty(VER_CHROME_AL_SUBIR)?.toBooleanStrictOrNull() ?: true
+        set(v) {
+            valores.setProperty(VER_CHROME_AL_SUBIR, v.toString())
+            guardar()
+        }
+
     private fun guardar() {
         try {
             Files.newBufferedWriter(archivo, Charsets.UTF_8).use { valores.store(it, "Ajustes de JujaMaker") }
@@ -52,5 +60,6 @@ class Ajustes(private val archivo: Path) {
     private companion object {
         const val INCLUIR_CREADOR = "incluirCreador"
         const val DESMARCADOS = "usuariosDesmarcados"
+        const val VER_CHROME_AL_SUBIR = "verChromeAlSubir"
     }
 }

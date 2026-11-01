@@ -24,7 +24,7 @@ class EstadoApp(val rutas: Rutas) {
     val sesion = EstadoSesion(rutas, hilo, ocupacion)
     /** Lo que se recuerda de una vez para otra (ajustes.properties). */
     val ajustes = Ajustes(rutas.ajustes)
-    val subida = EstadoSubida(rutas, hilo, ocupacion)
+    val subida = EstadoSubida(rutas, hilo, ocupacion, ajustes)
     val descarga = EstadoDescarga(rutas, hilo, ocupacion, ajustes)
     /** La ventana de añadir y quitar usuarios (botón "Editar" de Descargar). */
     val edicion = EstadoEdicion(rutas, hilo, ocupacion, descarga)
@@ -34,6 +34,7 @@ class EstadoApp(val rutas: Rutas) {
     val datos = EstadoDatos(rutas, hilo, ocupacion) { sesionTraida ->
         ajustes.recargar()
         descarga.cargarAjustes()
+        subida.cargarAjustes()
         descarga.cargarLista()
         subida.cargar()
         if (sesionTraida) sesion.comprobar()

@@ -167,8 +167,10 @@ public class Downloader {
      * con normalidad (Playwright lo arranca con --disable-backgrounding-occluded-windows),
      * pero no ocupa sitio; solo se ve en la barra de tareas. Si MakerOnline pide captcha,
      * se trae a la vista con las herramientas de Chrome (CDP) y luego se vuelve a apartar.
+     * La usa también el Uploader (sin "Ver Chrome mientras sube"): la trae a la vista para
+     * que revises cada borrador.
      */
-    private static final class Ventana {
+    static final class Ventana {
         static final long TIEMPO_CAPTCHA_MS = 5 * 60_000;
         /** Posición fuera de cualquier monitor. */
         static final int FUERA = -10_000;
