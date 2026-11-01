@@ -14,6 +14,27 @@ Respeta las licencias de los modelos que descargues. Está basada en la herramie
 
 ---
 
+## Descargar
+
+1. Entra en [Releases](https://github.com/jesuscarrascofdzdev/jujamaker/releases) y baja el último `JujaMaker-<versión>.exe`.
+2. Ejecútalo. Necesitas Windows 10 u 11 y Google Chrome; Java ya va dentro. Se instala sin permisos de administrador, solo para tu usuario.
+3. Como no está firmado, Windows dirá "Windows protegió tu PC": *Más información → Ejecutar de todas formas*.
+4. Para actualizar, ejecuta el instalador nuevo: sustituye al anterior y tus datos (sesión, lista de usuarios, subidas) se conservan.
+
+## Publicar una versión
+
+1. Sube `versionApp` en `desktop/build.gradle.kts` (por ejemplo `1.2.0` → `1.2.1`) y haz commit.
+2. Crea el instalador: `gradlew :desktop:crearInstalador`. Queda en el escritorio como `JujaMaker-<versión>.exe`.
+3. Prueba el `.exe` instalándolo (o con *Probar la app empaquetada*).
+4. Pon una etiqueta y súbela:
+   ```
+   git tag v1.2.1
+   git push origin main --tags
+   ```
+5. En GitHub: *Releases → Draft a new release*, elige la etiqueta `v1.2.1`, escribe qué cambia, adjunta `JujaMaker-1.2.1.exe` y pulsa *Publish release*.
+
+---
+
 ## Estructura
 
 ```
