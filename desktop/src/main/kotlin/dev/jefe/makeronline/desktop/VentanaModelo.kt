@@ -205,7 +205,7 @@ private fun ZonaArchivo(
         Text(titulo, style = MaterialTheme.typography.titleSmall)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                archivo?.let { "✔ " + it.fileName } ?: vacio,
+                archivo?.let { "✓ " + it.fileName } ?: vacio,
                 color = if (archivo != null) VERDE else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

@@ -39,11 +39,40 @@ class EstadoDescarga(
     var listaExiste by mutableStateOf(true)
         private set
 
-    /** La entrada elegida en la lista (para "Solo el seleccionado"), o null. */
-    var seleccionado by mutableStateOf<String?>(null)
-    var soloSeleccionado by mutableStateOf(false)
+    /**
+     * Los usuarios de la lista que están desmarcados (no se descargan). Se guardan los desmarcados y
+     * no los marcados: así, un usuario nuevo sale marcado. Se recuerda (ajustes.properties).
+     */
+    var desmarcados by mutableStateOf(ajustes.desmarcados)
+        private set
 
-    /** Si al descargar toda la lista va el creador de la app el primero (ver [Creador]). Se recuerda. */
+    fun marcado(entrada: String): Boolean = entrada !in desmarcados
+
+    /** Cuántos de la lista están marcados (sin contar al creador). */
+    val marcados: Int get() = usuarios.count { it !in desmarcados }
+
+    fun cambiarMarca(entrada: String, marcar: Boolean) {
+        guardarDesmarcados(if (marcar) desmarcados - entrada else desmarcados + entrada)
+    }
+
+    /** Marca a todos, también al creador. */
+    fun marcarTodos() {
+        guardarDesmarcados(emptySet())
+        cambiarCreador(true)
+    }
+
+    /** Desmarca a todos, también al creador (para luego marcar solo a uno). */
+    fun desmarcarTodos() {
+        guardarDesmarcados(usuarios.toSet())
+        cambiarCreador(false)
+    }
+
+    private fun guardarDesmarcados(nuevos: Set<String>) {
+        desmarcados = nuevos
+        ajustes.desmarcados = nuevos
+    }
+
+    /** Si va el creador de la app el primero (ver [Creador]). Se recuerda. */
     var incluirCreador by mutableStateOf(ajustes.incluirCreador)
         private set
 
@@ -55,6 +84,7 @@ class EstadoDescarga(
     /** Vuelve a coger lo que se recuerda (después de traer los datos de antes). */
     fun cargarAjustes() {
         incluirCreador = ajustes.incluirCreador
+        desmarcados = ajustes.desmarcados
     }
 
     // ------------------------------------------------------------ opciones (como en la terminal)
@@ -82,6 +112,18 @@ class EstadoDescarga(
         private set
     /** "3/10 · Llavero gato" */
     var modeloActual by mutableStateOf<String?>(null)
+        private set
+    /** El número del usuario que se está mirando (4 de "4/9") y cuántos hay; para la barra de progreso. */
+    var indiceUsuario by mutableStateOf<Int?>(null)
+        private set
+    var totalUsuarios by mutableStateOf(0)
+        private set
+    /** La entrada de la lista (o el creador) que se está mirando ahora, y las ya terminadas. */
+    var usuarioEnCurso by mutableStateOf<String?>(null)
+        private set
+    val usuariosHechos = mutableStateListOf<String>()
+    /** Cuánto dura la pausa en curso (milisegundos), para la barrita de la cuenta atrás. */
+    var pausaTotal by mutableStateOf(0L)
         private set
     /** "2/7" mientras lee la lista de modelos de un usuario con "todos". */
     var paginas by mutableStateOf<String?>(null)
@@ -128,9 +170,10 @@ class EstadoDescarga(
         usuarios = l.entradas
         errorLista = l.error
         listaExiste = l.existe
-        if (seleccionado !in usuarios) {
-            seleccionado = null
-            soloSeleccionado = false
+        // Los desmarcados que ya no están en la lista (quitados con Editar) se olvidan.
+        // Con usuarios.json roto no se toca nada: se perderían.
+        if (l.error == null && l.existe && desmarcados.any { it !in usuarios }) {
+            guardarDesmarcados(desmarcados.filter { it in usuarios }.toSet())
         }
     }
 
@@ -138,10 +181,11 @@ class EstadoDescarga(
     fun problemaOpciones(): String? {
         if (!todos && (ultimos.toIntOrNull() ?: 0) < 1) return Textos.ERROR_ULTIMOS
         if (maximo.isNotBlank() && (maximo.toIntOrNull() ?: 0) < 1) return Textos.ERROR_MAXIMO
-        if (soloSeleccionado && seleccionado == null) return Textos.ERROR_SIN_SELECCION
-        if (!soloSeleccionado && errorLista != null) return Textos.ERROR_LISTA_ROTA
+        if (errorLista != null) return Textos.ERROR_LISTA_ROTA
         // Si usuarios.json no existe se deja seguir: el Downloader lo crea con instrucciones
-        if (!soloSeleccionado && usuarios.isEmpty() && listaExiste && !incluirCreador) return Textos.ERROR_LISTA_VACIA
+        if (listaExiste && marcados == 0 && !incluirCreador) {
+            return if (usuarios.isEmpty()) Textos.ERROR_LISTA_VACIA else Textos.ERROR_NINGUNO_MARCADO
+        }
         return null
     }
 
@@ -159,7 +203,7 @@ class EstadoDescarga(
         val c = Cancelacion()
         cancelacion = c
         val opciones = Downloader.Opciones(
-            if (soloSeleccionado) seleccionado else null,
+            null,
             if (todos) 0 else ultimos.toInt(),
             simular,
             maximo.toIntOrNull() ?: Int.MAX_VALUE,
@@ -167,14 +211,15 @@ class EstadoDescarga(
             perfil,
             modo,
             false,
-            // El creador va el primero, pero solo al descargar toda la lista
-            if (!soloSeleccionado && incluirCreador) listOf(Creador.ENTRADA) else emptyList(),
+            // El creador va el primero (si está marcado); los desmarcados de la lista, no
+            if (incluirCreador) listOf(Creador.ENTRADA) else emptyList(),
+            desmarcados.toList(),
         )
         var cerrandoApp = false
         try {
             resumen = hilo.ejecutar {
                 // Solo un programa con Chrome a la vez: comparten chrome-profile/ con la terminal
-                AgentLock.acquire(rutas.candado, "MakerOnline Desktop (descargando)", false, progreso).use {
+                AgentLock.acquire(rutas.candado, "JujaMaker (descargando)", false, progreso).use {
                     Downloader(rutas.paraLaApp(), progreso, c).ejecutar(opciones)
                 }
             }
@@ -194,6 +239,9 @@ class EstadoDescarga(
             pausaHasta = null
             captcha = null
             paginas = null
+            indiceUsuario = null
+            usuarioEnCurso = null
+            usuariosHechos.clear()
             ocupacion.terminar()
             cargarLista() // por si el Downloader ha creado usuarios.json
         }
@@ -251,6 +299,10 @@ class EstadoDescarga(
         pausaHasta = null
         captcha = null
         parando = false
+        indiceUsuario = null
+        totalUsuarios = 0
+        usuarioEnCurso = null
+        usuariosHechos.clear()
         zip = null
         errorZip = null
     }
@@ -263,6 +315,10 @@ class EstadoDescarga(
                 val nombre = ListaUsuarios.describir(e.nombre).nombre
                 usuarioActual = "${e.indice}/${e.total} · " +
                     if (e.nombre == Creador.ENTRADA) Textos.esCreador(nombre) else nombre
+                usuarioEnCurso?.let { if (it != e.nombre && it !in usuariosHechos) usuariosHechos.add(it) }
+                usuarioEnCurso = e.nombre
+                indiceUsuario = e.indice
+                totalUsuarios = e.total
                 modeloActual = null
                 paginas = null
             }
@@ -273,7 +329,8 @@ class EstadoDescarga(
             }
             is Evento.Paginas -> paginas = "${e.pagina}/${e.ultima}"
             is Evento.Pausa -> {
-                pausaHasta = System.currentTimeMillis() + e.segundos * 1000
+                pausaTotal = e.segundos * 1000L
+                pausaHasta = System.currentTimeMillis() + pausaTotal
                 anotar(Evento.Mensaje(TipoMensaje.INFO, Textos.pausa(e.segundos)))
             }
             is Evento.Captcha -> {

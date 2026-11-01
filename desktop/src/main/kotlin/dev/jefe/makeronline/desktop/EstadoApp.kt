@@ -28,6 +28,8 @@ class EstadoApp(val rutas: Rutas) {
     val descarga = EstadoDescarga(rutas, hilo, ocupacion, ajustes)
     /** La ventana de añadir y quitar usuarios (botón "Editar" de Descargar). */
     val edicion = EstadoEdicion(rutas, hilo, ocupacion, descarga)
+    /** La tarjeta "Conectar con Claude" (pantalla Sesión). */
+    val claude = EstadoClaude()
     /** Traer los datos de antes (pantalla Sesión). Después, todo se vuelve a leer. */
     val datos = EstadoDatos(rutas, hilo, ocupacion) { sesionTraida ->
         ajustes.recargar()

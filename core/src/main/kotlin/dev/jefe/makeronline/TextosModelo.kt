@@ -62,7 +62,7 @@ object TextosModelo {
     /** Los textos en formato .txt (lo contrario de [interpretar]), para guardarlos desde la app. */
     @JvmStatic
     fun escribir(meta: ModelMeta): String = buildString {
-        append("# Textos del modelo (MakerOnline Desktop)\n")
+        append("# Textos del modelo (JujaMaker)\n")
         append("Título: ").append(meta.title() ?: "").append('\n')
         append("Categoría: ").append(meta.category()?.joinToString(" > ") ?: "").append('\n')
         append("Etiquetas: ").append(meta.tags()?.joinToString(", ") ?: "").append('\n')

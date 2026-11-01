@@ -71,7 +71,7 @@ class Sesion(private val rutas: Rutas) {
         if (!Files.isDirectory(rutas.perfilChrome)) {
             return Estado(chromeInstalado = true, iniciada = false, motivo = "todavía no has iniciado sesión")
         }
-        AgentLock.acquire(rutas.candado, "MakerOnline Desktop (comprobando la sesión)", false, progreso).use {
+        AgentLock.acquire(rutas.candado, "JujaMaker (comprobando la sesión)", false, progreso).use {
             Browsers.playwright().use { pw ->
                 Browsers.openChrome(pw, rutas.perfilChrome, 0.0, true, false).use { ctx ->
                     val token = token(ctx)
@@ -97,7 +97,7 @@ class Sesion(private val rutas: Rutas) {
      * @throws AgenteException si otro programa está usando Chrome (candado ocupado)
      */
     fun abrirParaIniciar(progreso: Progreso): Abierta {
-        val candado = AgentLock.acquire(rutas.candado, "MakerOnline Desktop (iniciando sesión)", false, progreso)
+        val candado = AgentLock.acquire(rutas.candado, "JujaMaker (iniciando sesión)", false, progreso)
         var pw: Playwright? = null
         try {
             pw = Browsers.playwright()
@@ -122,7 +122,7 @@ class Sesion(private val rutas: Rutas) {
      */
     fun buscarUsuario(entrada: String, progreso: Progreso): Busqueda {
         if (!Files.isDirectory(rutas.perfilChrome)) throw AgenteException(SIN_SESION)
-        AgentLock.acquire(rutas.candado, "MakerOnline Desktop (buscando un usuario)", false, progreso).use {
+        AgentLock.acquire(rutas.candado, "JujaMaker (buscando un usuario)", false, progreso).use {
             Browsers.playwright().use { pw ->
                 Browsers.openChrome(pw, rutas.perfilChrome, 0.0, true, false).use { ctx ->
                     ctx.setDefaultTimeout(30_000.0)

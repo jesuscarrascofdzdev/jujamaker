@@ -5,7 +5,7 @@ import javax.swing.SwingUtilities
 
 /** Tipo de mensaje, con el mismo símbolo que en la terminal. */
 enum class TipoMensaje(val simbolo: String) {
-    INFO(""), PASO("→"), CORRECTO("✔"), SALTADO("↷"), LIKE("♥"), NOTA("·"), ERROR("✘"), AVISO("⚠"),
+    INFO(""), PASO("→"), CORRECTO("✓"), SALTADO("↷"), LIKE("♥"), NOTA("·"), ERROR("✘"), AVISO("⚠"),
 }
 
 /** Lo que cuenta core mientras trabaja, convertido en datos para la ventana. */

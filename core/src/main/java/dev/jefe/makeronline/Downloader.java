@@ -69,7 +69,7 @@ import java.util.regex.Pattern;
 public class Downloader {
 
     /** Se muestra al arrancar: así se sabe qué versión del código se está ejecutando. */
-    private static final String VERSION = "11 (fase 2c: buscador de usuarios aparte)";
+    private static final String VERSION = "12 (usuarios sin marcar en la app)";
 
     private static final String WEB = Api.WEB;
     private static final int ULTIMOS_POR_DEFECTO = 10;
@@ -82,11 +82,13 @@ public class Downloader {
     /**
      * usuario == null → todos los de usuarios.json; ultimos == 0 → todos sus modelos.
      *
-     * @param fijos usuarios que se repasan siempre los primeros, antes de los de usuarios.json
-     *              (la app pone aquí al creador). Solo cuentan si usuario == null. En la terminal, ninguno.
+     * @param fijos  usuarios que se repasan siempre los primeros, antes de los de usuarios.json
+     *               (la app pone aquí al creador). Solo cuentan si usuario == null. En la terminal, ninguno.
+     * @param saltar entradas de usuarios.json que no se repasan esta vez (las que se han desmarcado
+     *               en la app). Solo cuentan si usuario == null. En la terminal, ninguna.
      */
     public record Opciones(String usuario, int ultimos, boolean simular, int max, int espera,
-                           boolean perfil, Modo modo, boolean esperar, List<String> fijos) {}
+                           boolean perfil, Modo modo, boolean esperar, List<String> fijos, List<String> saltar) {}
 
     /** Cómo se ve Chrome mientras trabaja. */
     public enum Modo {
@@ -263,8 +265,17 @@ public class Downloader {
     public Resumen ejecutar(Opciones op) throws Exception {
         progreso.info("Downloader · versión " + VERSION);
         // Usuario por argumento → solo ese; si no, los fijos y luego todos los de usuarios.json
-        List<String> entradas = op.usuario() != null ? List.of(op.usuario())
-                : ListaUsuarios.conFijos(op.fijos(), leerLista(!op.fijos().isEmpty()));
+        List<String> entradas;
+        if (op.usuario() != null) {
+            entradas = List.of(op.usuario());
+        } else {
+            List<String> lista = leerLista(!op.fijos().isEmpty());
+            List<String> marcados = lista.stream().filter(e -> !op.saltar().contains(e)).toList();
+            if (marcados.size() < lista.size()) {
+                progreso.info("Sin marcar (no se repasan esta vez): " + (lista.size() - marcados.size()));
+            }
+            entradas = ListaUsuarios.conFijos(op.fijos(), marcados);
+        }
         if (entradas.isEmpty()) return new Resumen(0, 0, 0, 0, List.of(), op.simular(), false);
         if (!Files.isDirectory(rutas.getPerfilChrome())) {
             throw new AgenteException("No hay sesión guardada. Ejecuta primero SaveSession.");
@@ -942,7 +953,7 @@ public class Downloader {
             return null;
         }
         if (max < 1 || espera < 0 || ultimos < 0) return null;
-        return new Opciones(usuario, ultimos, simular, max, espera, perfil, modo, esperar, List.of());
+        return new Opciones(usuario, ultimos, simular, max, espera, perfil, modo, esperar, List.of(), List.of());
     }
 
     private static void ayuda() {

@@ -33,9 +33,17 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
+    /** Los usuarios de usuarios.json que se han desmarcado en Descargar (no se descargan). */
+    var desmarcados: Set<String>
+        get() = valores.getProperty(DESMARCADOS)?.split('\n')?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+        set(v) {
+            if (v.isEmpty()) valores.remove(DESMARCADOS) else valores.setProperty(DESMARCADOS, v.sorted().joinToString("\n"))
+            guardar()
+        }
+
     private fun guardar() {
         try {
-            Files.newBufferedWriter(archivo, Charsets.UTF_8).use { valores.store(it, "Ajustes de MakerOnline Desktop") }
+            Files.newBufferedWriter(archivo, Charsets.UTF_8).use { valores.store(it, "Ajustes de JujaMaker") }
         } catch (_: Exception) {
             // si no se puede guardar, la próxima vez se usa el valor de siempre
         }
@@ -43,5 +51,6 @@ class Ajustes(private val archivo: Path) {
 
     private companion object {
         const val INCLUIR_CREADOR = "incluirCreador"
+        const val DESMARCADOS = "usuariosDesmarcados"
     }
 }

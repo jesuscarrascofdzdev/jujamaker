@@ -31,6 +31,11 @@ object CarpetaDatos {
      */
     const val PROPIEDAD_ANTERIOR = "makeronline.datosAnteriores"
 
+    /**
+     * El nombre de la carpeta de datos. Es el nombre antiguo de la app (antes de llamarse JujaMaker) y
+     * se deja así para no perder la sesión ni las listas de quien ya la usaba. ¡Nunca "JujaMaker"!:
+     * esa es la carpeta de instalación (%LOCALAPPDATA%\JujaMaker), que Windows borra al actualizar.
+     */
     private const val NOMBRE = "MakerOnline Desktop"
 
     /** La carpeta de datos que usa la app. */
@@ -148,8 +153,8 @@ object TraerDatos {
         val traido = ArrayList<String>()
         val avisos = ArrayList<String>()
         var sesion = false
-        AgentLock.acquire(antes.candado, "MakerOnline Desktop (trayendo datos)", false, ProgresoNulo).use {
-            AgentLock.acquire(destino.candado, "MakerOnline Desktop (trayendo datos)", false, ProgresoNulo).use {
+        AgentLock.acquire(antes.candado, "JujaMaker (trayendo datos)", false, ProgresoNulo).use {
+            AgentLock.acquire(destino.candado, "JujaMaker (trayendo datos)", false, ProgresoNulo).use {
                 // --- La sesión de Chrome ---
                 if (antes.perfilChrome.isDirectory()) {
                     if (tieneAlgo(destino.perfilChrome)) {

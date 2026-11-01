@@ -5,12 +5,13 @@ package dev.jefe.makeronline.desktop
  * Para traducir la app más adelante, solo habrá que tocar aquí.
  */
 object Textos {
-    const val TITULO_APP = "MakerOnline Desktop"
+    const val TITULO_APP = "JujaMaker"
 
     // ------------------------------------------------------------ menú
     const val MENU_SESION = "Sesión"
     const val MENU_SUBIR = "Subir"
     const val MENU_DESCARGAR = "Descargar"
+
 
     // ------------------------------------------------------------ sesión
     const val SESION_TITULO = "Sesión"
@@ -28,6 +29,9 @@ object Textos {
     const val SESION_INICIADA = "Sesión iniciada"
     fun sesionIniciadaComo(nombre: String) = "Sesión iniciada como $nombre"
     fun sinSesion(motivo: String?) = "Sin sesión" + (motivo?.let { ": $it" } ?: "")
+    /** En la barra de arriba. */
+    fun sesionEnBarra(nombre: String) = "Sesión iniciada · $nombre"
+    const val SIN_SESION_BARRA = "Sin sesión"
     const val INICIAR_SESION = "Iniciar sesión"
     const val VOLVER_A_INICIAR = "Volver a iniciar sesión"
     const val COMPROBAR = "Comprobar otra vez"
@@ -38,12 +42,38 @@ object Textos {
     const val YA_HE_ENTRADO = "Ya he entrado"
     const val CANCELAR = "Cancelar"
     fun carpetaDatos(ruta: String) = "Carpeta de datos: $ruta"
+    const val CARPETA_DATOS_TITULO = "Carpeta de datos"
     const val ABRIR_CARPETA_DATOS = "Abrir"
+
+    // ------------------------------------------------------------ conectar con Claude
+    const val CLAUDE_TITULO = "Conectar con Claude"
+    const val CLAUDE_EXPLICACION =
+        "Usa la app desde Claude (la aplicación de escritorio o Claude Code) con tu cuenta de Claude: " +
+            "«¿qué tengo pendiente?», «mira la foto de flower y escríbele la descripción»… Cierra Claude " +
+            "antes de pulsar el botón y, después, ábrelo otra vez."
+    const val CLAUDE_CONECTADO = "Conectado: Claude puede usar la app."
+    const val CLAUDE_ETIQUETA_CONECTADO = "Conectado"
+    const val CLAUDE_NO_CONECTADO = "Sin conectar."
+    const val CLAUDE_OTRA_RUTA = "Claude tiene un conector de una versión anterior o de otra copia de la app: pulsa Conectar para usar esta."
+    const val CLAUDE_SIN_CLAUDE = "No encuentro la aplicación de Claude en este ordenador. Instálala y ábrela una vez antes de conectar."
+    const val CLAUDE_SIN_APP = "Para conectar hace falta la app instalada (con su instalador): desde IntelliJ no se puede."
+    const val CLAUDE_CONECTAR = "Conectar con Claude"
+    const val CLAUDE_RECONECTAR = "Volver a conectar"
+    const val CLAUDE_QUITAR = "Quitar"
+    const val CLAUDE_COPIAR_COMANDO = "Copiar el comando para Claude Code"
+    const val CLAUDE_CONECTADO_REINICIA =
+        "✓ Hecho. Ahora cierra Claude del todo (también desde el icono junto al reloj) y ábrelo otra vez."
+    const val CLAUDE_QUITADO_REINICIA = "✓ Conector quitado. Cierra Claude del todo y ábrelo otra vez."
+    const val CLAUDE_COMANDO_COPIADO = "✓ Comando copiado: pégalo en una terminal y pulsa Enter."
+    const val NO_SE_PUDO_COPIAR = "No se ha podido copiar: vuelve a probar."
+    fun configClaudeRota(ruta: String) =
+        "El archivo de configuración de Claude ($ruta) no se puede leer como JSON: no lo toco, para no estropear tu configuración. Revísalo y vuelve a probar."
+    fun claudeArchivo(ruta: String) = "Archivo de Claude: $ruta"
 
     // ------------------------------------------------------------ traer los datos de antes
     const val TRAER_TITULO = "Traer tus datos de antes"
     fun traerExplicacion(ruta: String) =
-        "Hay datos de MakerOnline Desktop en $ruta. Ahora la app guarda todo en su propia carpeta. " +
+        "Hay datos de la app en $ruta. Ahora la app guarda todo en su propia carpeta. " +
             "Tráelos para seguir con tu sesión, tu lista de usuarios, lo ya descargado y tus carpetas " +
             "de subidas. Solo se copian: allí no se borra nada."
     const val TRAER = "Traer mis datos"
@@ -52,14 +82,14 @@ object Textos {
     const val TRAYENDO = "Copiando tus datos… (la sesión de Chrome puede tardar un poco)"
     const val TRAER_MISMA = "Esa es la carpeta de datos que ya usa la app: no hay nada que traer."
     fun traerNada(ruta: String) =
-        "En $ruta no hay datos de MakerOnline Desktop (ni chrome-profile, ni usuarios.json, ni descargados.txt, ni subidas)."
+        "En $ruta no hay datos de la app (ni chrome-profile, ni usuarios.json, ni descargados.txt, ni subidas)."
     const val TRAIDO_SESION = "la sesión de Chrome"
     fun traidosUsuarios(n: Int) = if (n == 1) "1 usuario de la lista" else "$n usuarios de la lista"
     fun traidosDescargados(n: Int) = if (n == 1) "1 modelo ya descargado" else "$n modelos ya descargados"
     const val TRAIDOS_AJUSTES = "los ajustes"
     fun traidasSubidas(n: Int) = if (n == 1) "1 carpeta de subidas" else "$n carpetas de subidas"
     const val TRAER_NADA_NUEVO = "No había nada nuevo que traer: la app ya lo tenía todo."
-    fun traidoResumen(cosas: List<String>) = "✔ Traído: " + cosas.joinToString(", ") + "."
+    fun traidoResumen(cosas: List<String>) = "✓ Traído: " + cosas.joinToString(", ") + "."
     const val TRAER_YA_HAY_SESION =
         "La sesión de Chrome no se ha traído porque la app ya tiene una. Si no funciona, usa \"Volver a iniciar sesión\"."
     fun traerSinSesion(motivo: String) =
@@ -91,11 +121,12 @@ object Textos {
     const val EDITAR = "Editar"
     const val CREADOR = "Creador de la app"
     const val CREADOR_DETALLE =
-        "Va el primero al descargar toda la lista: así apoyas la app gratis. Puedes desmarcarlo."
+        "Va el primero: así apoyas la app gratis. Puedes desmarcarlo."
     const val CREADOR_FIJO = "Creador de la app · no se puede quitar; se marca o desmarca en Descargar"
     fun esCreador(nombre: String) = "$nombre (creador de la app)"
-    const val TODOS_LOS_USUARIOS = "Todos los de la lista"
-    const val SOLO_SELECCIONADO = "Solo el seleccionado"
+    const val MARCAR_TODOS = "Marcar todos"
+    const val DESMARCAR_TODOS = "Desmarcar todos"
+    fun marcados(n: Int) = if (n == 1) "1 marcado" else "$n marcados"
     const val OPCIONES = "Opciones"
     const val ULTIMOS = "Últimos modelos"
     const val ULTIMOS_AYUDA = "de cada usuario"
@@ -104,9 +135,14 @@ object Textos {
     const val MAXIMO = "Máximo de descargas"
     const val MAXIMO_AYUDA = "vacío = sin límite"
     const val VENTANA_CHROME = "Ventana de Chrome"
-    const val MODO_APARTADA = "Fuera de la pantalla (recomendado): aparece sola si hay captcha"
+    const val MODO_APARTADA = "Fuera de la pantalla (recomendado)"
+    const val MODO_APARTADA_AYUDA = "Aparece sola si hay captcha"
     const val MODO_VISIBLE = "Visible todo el rato"
-    const val MODO_SIN_VENTANA = "Sin ventana: si sale un captcha, se para"
+    const val MODO_SIN_VENTANA = "Sin ventana"
+    const val MODO_SIN_VENTANA_AYUDA = "Si sale un captcha, se para"
+    const val EN_MARCHA = "En marcha"
+    const val USUARIO_HECHO = "✓ hecho"
+    const val USUARIO_AHORA = "ahora"
     const val SIMULAR = "Simular"
     const val SIMULAR_AYUDA = "Solo lista lo que descargaría; no descarga ni da like."
     const val DESCARGAR = "Descargar"
@@ -135,9 +171,9 @@ object Textos {
     const val VER_ERRORES = "Ver detalle de errores"
     const val ERROR_ULTIMOS = "Pon cuántos de los últimos modelos quieres mirar (un número de 1 en adelante)."
     const val ERROR_MAXIMO = "El máximo de descargas tiene que ser un número de 1 en adelante, o dejarlo vacío."
-    const val ERROR_SIN_SELECCION = "Elige un usuario de la lista, o marca \"Todos los de la lista\"."
+    const val ERROR_NINGUNO_MARCADO = "No hay ningún usuario marcado: marca al menos uno (o al creador de la app)."
     const val ERROR_LISTA_VACIA = "No hay usuarios en la lista."
-    const val ERROR_LISTA_ROTA = "Arregla usuarios.json antes de descargar toda la lista (el error sale a la izquierda)."
+    const val ERROR_LISTA_ROTA = "Arregla usuarios.json antes de descargar (el error sale a la izquierda)."
 
     // ------------------------------------------------------------ editar la lista de usuarios
     const val EDITAR_TITULO = "Editar la lista de usuarios"
@@ -149,7 +185,7 @@ object Textos {
     const val AGREGAR = "Añadir"
     const val BUSCANDO_USUARIO = "Buscando en MakerOnline…"
     fun chromeOcupado(tarea: String) = "Chrome está ocupado ($tarea). Podrás añadir cuando termine; quitar sí se puede."
-    fun agregado(nombre: String, handle: String) = "✔ Añadido: $nombre" + (if (handle.isBlank()) "" else " ($handle)")
+    fun agregado(nombre: String, handle: String) = "✓ Añadido: $nombre" + (if (handle.isBlank()) "" else " ($handle)")
     fun yaEsta(nombre: String, como: String) = "$nombre ya está en la lista (como \"$como\")."
     fun quitado(nombre: String) = "Quitado: $nombre"
     const val SIN_USUARIOS = "Todavía no hay nadie en la lista. Añade el primero arriba."
@@ -180,7 +216,7 @@ object Textos {
     const val ANADIR_CARPETAS = "Añadir carpetas…"
     const val ELEGIR_CARPETAS = "Elige las carpetas de los modelos"
     const val COPIANDO = "Copiando a pendientes…"
-    fun carpetasAnadidas(nombres: List<String>) = "✔ Añadidas a pendientes: " + nombres.joinToString(", ")
+    fun carpetasAnadidas(nombres: List<String>) = "✓ Añadidas a pendientes: " + nombres.joinToString(", ")
     fun noEsCarpeta(nombre: String) = "✘ $nombre no es una carpeta: arrastra la carpeta del modelo, no sus archivos."
     fun yaEnPendientes(nombre: String) = "✘ $nombre ya está en pendientes."
     fun contienePendientes(nombre: String) = "✘ $nombre contiene la propia carpeta de pendientes: no se copia."
@@ -191,6 +227,10 @@ object Textos {
     fun noSePuedeCopiar(nombre: String, motivo: String) = "✘ No he podido copiar $nombre: $motivo"
     const val NADA_EN_PENDIENTES = "No hay nada en pendientes."
     const val LISTA_PARA_SUBIR = "Lista para subir"
+    const val LE_FALTA_ALGO = "Le falta algo"
+    const val SIN_PORTADA = "sin portada"
+    const val SUBIR_AHORA = "Subir ahora"
+    const val QUE_CARPETAS = "Qué carpetas"
     const val POR_DEFECTO = " (por defecto)"
     fun todasLasValidas(n: Int) = "Todas las que están bien ($n)"
     const val SOLO_LA_SELECCIONADA = "Solo la seleccionada"
@@ -216,10 +256,23 @@ object Textos {
     const val BOTON_DESCRIPCION = "Descripción"
     const val BOTON_EDITAR = "Editar"
     const val BOTON_ELIMINAR = "Eliminar"
+    const val BOTON_PEGAR = "Pegar descripción"
+
+    // ------------------------------------------------------------ ventana Pegar descripción
+    fun tituloPegar(carpeta: String) = "Pegar descripción: $carpeta"
+    const val PEGAR_EXPLICACION =
+        "Pega aquí la descripción que te haya dado una IA (ChatGPT, Gemini, Claude…). La app la reparte en " +
+            "título, categoría, etiquetas y descripción, y la abre para que la revises antes de guardar."
+    const val PEGAR_CAMPO = "Texto de la IA"
+    const val PEGAR_DEL_PORTAPAPELES = "Pegar del portapapeles"
+    const val PEGAR_NADA = "En el portapapeles no hay texto: copia antes la respuesta de la IA."
+    const val PEGAR_RELLENAR = "Rellenar"
+    const val REVISA_PEGADO = "Textos pegados: revísalos y pulsa Guardar (todavía no se ha guardado nada)."
+    fun etiquetasRecortadas(n: Int) = "el texto trae $n etiquetas y MakerOnline admite 20: se han quedado las 20 primeras"
     const val ELIMINAR_PREGUNTA = "¿Eliminarla?"
     const val SI_ELIMINAR = "Sí, eliminar"
-    fun eliminadaPapelera(n: String) = "✔ $n eliminada: está en la papelera de Windows, por si la necesitas."
-    fun eliminadaEn(n: String, ruta: String) = "✔ $n quitada de pendientes: está en $ruta"
+    fun eliminadaPapelera(n: String) = "✓ $n eliminada: está en la papelera de Windows, por si la necesitas."
+    fun eliminadaEn(n: String, ruta: String) = "✓ $n quitada de pendientes: está en $ruta"
     fun noSePuedeEliminar(n: String, motivo: String) =
         "✘ No he podido eliminar $n: $motivo (¿la tienes abierta en el Explorador o en otro programa?)"
     fun masProblemas(n: Int) = " (+$n más; pulsa la carpeta para verlos)"
@@ -237,10 +290,10 @@ object Textos {
     const val FALTAN_OPCIONES =
         "Todavía faltan las listas completas de MakerOnline (salen del Diagnóstico del formulario). " +
             "De momento solo están las opciones ya comprobadas y las que tenga la carpeta."
-    const val TEXTOS_COMPLETOS = "✔ Completo: se puede subir"
+    const val TEXTOS_COMPLETOS = "✓ Completo: se puede subir"
     fun faltanTextos(campos: List<String>) = "Para poder subirlo falta: " + campos.joinToString(", ") +
         ". Puedes guardar igual y terminarlo luego."
-    fun descripcionGuardada(carpeta: String, archivo: String) = "✔ Descripción de $carpeta guardada en $archivo"
+    fun descripcionGuardada(carpeta: String, archivo: String) = "✓ Descripción de $carpeta guardada en $archivo"
     // ------------------------------------------------------------ ventana Agregar / Editar modelo
     const val AGREGAR_MODELO = "Agregar modelo"
     const val BOTON_AGREGAR_MODELO = "+ Agregar modelo"
@@ -262,7 +315,7 @@ object Textos {
     const val FALTA_IMAGEN = "imagen"
     const val FALTA_MODELO = "modelo"
     const val FALTA_DESCRIPCION = "descripción"
-    const val MODELO_COMPLETO = "✔ Completo: se puede subir"
+    const val MODELO_COMPLETO = "✓ Completo: se puede subir"
     fun faltaModelo(cosas: List<String>) = "Para poder subirlo falta: " + cosas.joinToString(", ") + ". Puedes guardar igual."
     const val NOMBRE_CARPETA = "Nombre de la carpeta"
     const val PIDE_NOMBRE = "¿Cómo se llama la carpeta? Escribe el nombre y pulsa Guardar otra vez."
@@ -270,7 +323,7 @@ object Textos {
     const val NOMBRE_CARACTERES = "El nombre no puede tener estos caracteres: \\ / : * ? \" < > |"
     const val NOMBRE_PUNTO = "El nombre no puede acabar en punto."
     fun nombreRepetido(n: String) = "Ya hay una carpeta \"$n\" en pendientes: elige otro nombre."
-    fun modeloGuardado(carpeta: String) = "✔ Guardado en pendientes/$carpeta"
+    fun modeloGuardado(carpeta: String) = "✓ Guardado en pendientes/$carpeta"
     const val ERROR_SIN_CARPETA = "Elige una carpeta de la lista, o marca \"Todas las que están bien\"."
     const val ERROR_CARPETA_CON_PROBLEMAS = "La carpeta seleccionada tiene problemas: arréglalos antes de subirla."
     const val ERROR_NADA_PARA_SUBIR = "No hay ninguna carpeta lista para subir en pendientes."

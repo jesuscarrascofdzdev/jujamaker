@@ -10,7 +10,7 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value=":desktop:packageExe" />
+          <option value=":desktop:crearInstalador" />
         </list>
       </option>
       <option name="vmOptions" />

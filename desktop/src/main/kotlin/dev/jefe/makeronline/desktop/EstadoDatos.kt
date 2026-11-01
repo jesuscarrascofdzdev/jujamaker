@@ -28,7 +28,7 @@ class EstadoDatos(
     var trayendo by mutableStateOf(false)
         private set
 
-    /** Lo que ha salido bien la última vez ("✔ Traído: …"), o null. */
+    /** Lo que ha salido bien la última vez ("✓ Traído: …"), o null. */
     var resumen by mutableStateOf<String?>(null)
         private set
 

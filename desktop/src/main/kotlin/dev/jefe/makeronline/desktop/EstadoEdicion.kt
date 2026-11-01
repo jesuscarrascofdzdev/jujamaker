@@ -34,7 +34,7 @@ class EstadoEdicion(
     var buscando by mutableStateOf(false)
         private set
 
-    /** Lo último que ha salido bien ("✔ Añadido: …"), o null. */
+    /** Lo último que ha salido bien ("✓ Añadido: …"), o null. */
     var aviso by mutableStateOf<String?>(null)
         private set
 

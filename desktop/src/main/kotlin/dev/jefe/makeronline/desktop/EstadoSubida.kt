@@ -7,7 +7,9 @@ import androidx.compose.runtime.setValue
 import dev.jefe.makeronline.AgentLock
 import dev.jefe.makeronline.AgenteException
 import dev.jefe.makeronline.Cancelacion
+import dev.jefe.makeronline.InstruccionesIA
 import dev.jefe.makeronline.ModelFolder
+import dev.jefe.makeronline.ModelMeta
 import dev.jefe.makeronline.Rutas
 import dev.jefe.makeronline.TextosCarpeta
 import dev.jefe.makeronline.Uploader
@@ -31,6 +33,8 @@ data class CarpetaPendiente(
     val problemas: List<String>,
     val avisos: List<String> = emptyList(),
     val detalle: String? = null,
+    /** La imagen de portada (aunque a la carpeta le falten cosas), para la miniatura; null si no hay. */
+    val portada: Path? = null,
 ) {
     val valida: Boolean get() = problemas.isEmpty()
 }
@@ -118,16 +122,21 @@ class EstadoSubida(
 
     private fun comprobar(dir: Path): CarpetaPendiente {
         val nombre = dir.fileName.toString()
+        val portada = try {
+            ModelFolder.imagenesDe(dir).firstOrNull()
+        } catch (_: Exception) {
+            null
+        }
         return try {
             val m = ModelFolder.load(dir)
             val meta = m.meta()
             val detalle = meta.title() + " · " + meta.categoryOrDefault().joinToString(" - ") +
                 (if (meta.sinCategoria()) Textos.POR_DEFECTO else "")
-            CarpetaPendiente(nombre, dir, emptyList(), m.avisos(), detalle)
+            CarpetaPendiente(nombre, dir, emptyList(), m.avisos(), detalle, portada)
         } catch (e: IllegalStateException) {
-            CarpetaPendiente(nombre, dir, (e.message ?: e.toString()).lines().filter { it.isNotBlank() })
+            CarpetaPendiente(nombre, dir, (e.message ?: e.toString()).lines().filter { it.isNotBlank() }, portada = portada)
         } catch (e: IOException) {
-            CarpetaPendiente(nombre, dir, listOf(Textos.errorInesperado(e)))
+            CarpetaPendiente(nombre, dir, listOf(Textos.errorInesperado(e)), portada = portada)
         }
     }
 
@@ -190,6 +199,61 @@ class EstadoSubida(
 
     fun cerrarDescripcion() {
         descripcion = null
+    }
+
+    // ------------------------------------------------------------ ventana Pegar descripción
+
+    /** La ventana "Pegar descripción" abierta, o null si está cerrada. */
+    var pegar by mutableStateOf<EdicionPegar?>(null)
+        private set
+
+    fun abrirPegar(nombre: String) {
+        val c = carpetas.firstOrNull { it.nombre == nombre } ?: return
+        avisoCarpetas = null
+        errorCarpetas = null
+        pegar = EdicionPegar(c.nombre, c.dir)
+    }
+
+    fun cerrarPegar() {
+        pegar = null
+    }
+
+    /**
+     * "Rellenar": reparte el texto pegado en sus campos, lo junta con lo que ya tenía la carpeta (lo
+     * que el texto no traiga, como la licencia o el tipo, se queda como estaba) y lo abre en la ventana
+     * Descripción, para revisarlo y guardarlo. No se guarda nada hasta que la persona pulsa Guardar.
+     */
+    fun rellenarConPegado() {
+        val e = pegar ?: return
+        val nuevo = e.leer() ?: return
+        val l = try {
+            TextosCarpeta.leer(e.dir)
+        } catch (ex: IOException) {
+            e.error = Textos.errorInesperado(ex)
+            return
+        }
+        if (l.problema != null && l.archivo == null) { // varios archivos de textos: no se sabe cuál usar
+            e.error = l.problema
+            return
+        }
+        val antes = l.meta
+        val meta = ModelMeta(
+            nuevo.title()?.ifBlank { null } ?: antes?.title(),
+            nuevo.description()?.ifBlank { null } ?: antes?.description(),
+            nuevo.tags().orEmpty().take(InstruccionesIA.MAX_ETIQUETAS).ifEmpty { antes?.tags().orEmpty() },
+            if (nuevo.sinCategoria()) antes?.category() else nuevo.category(),
+            nuevo.license()?.ifBlank { null } ?: antes?.license(),
+            nuevo.printType()?.ifBlank { null } ?: antes?.printType(),
+        )
+        val sobran = nuevo.tags().orEmpty().size - InstruccionesIA.MAX_ETIQUETAS
+        val avisos = InstruccionesIA.revisar(meta) +
+            (if (sobran > 0) listOf(Textos.etiquetasRecortadas(nuevo.tags().size)) else emptyList())
+        pegar = null
+        descripcion = EdicionTextos(
+            e.carpeta, e.dir, l.archivo,
+            (listOf(Textos.REVISA_PEGADO) + avisos.map { "· $it" }).joinToString("\n"),
+            FormularioTextos().apply { cargar(meta) },
+        )
     }
 
     // ------------------------------------------------------------ eliminar una carpeta
@@ -284,7 +348,7 @@ class EstadoSubida(
         try {
             resumen = hilo.ejecutar {
                 // Solo un programa con Chrome a la vez: comparten chrome-profile/ con la terminal
-                AgentLock.acquire(rutas.candado, "MakerOnline Desktop (subiendo)", false, progreso).use {
+                AgentLock.acquire(rutas.candado, "JujaMaker (subiendo)", false, progreso).use {
                     Uploader(rutas, progreso, c, r).ejecutar(opciones)
                 }
             }
