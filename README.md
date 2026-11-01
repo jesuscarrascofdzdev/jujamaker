@@ -6,32 +6,24 @@ App de escritorio para subir y descargar modelos 3D de [MakerOnline](https://www
 
 Respeta las licencias de los modelos que descargues. Está basada en la herramienta de terminal [makerOnlineUploader](https://github.com/jesuscarrascofdzdev/makerOnlineUploader).
 
-- Funciona entera **sin IA**. La IA es opcional y cada persona usa su propia clave o una IA local (Ollama).
-- La sesión de MakerOnline (perfil de Chrome) **nunca sale de tu ordenador**.
-- Los captchas **no se saltan**: se enseña la ventana para que los resuelva la persona.
-
-> **Estado: fase 4 en curso (4a: la app guarda sus datos en su propia carpeta).** Fases 1, 2 y 3 terminadas. La app tiene menú y las pantallas Sesión, Subir (agregar, editar, eliminar y subir modelos, con su descripción) y Descargar (con la lista de usuarios y un zip en el escritorio al terminar). Al descargar toda la lista, la cuenta del creador de la app (juji-nya) va siempre la primera: viene marcada y se puede desmarcar, pero no quitar.
-
----
-
 ## Descargar
 
-1. Entra en [Releases](https://github.com/jesuscarrascofdzdev/jujamaker/releases) y baja el último `JujaMaker-<versión>.exe`.
-2. Ejecútalo. Necesitas Windows 10 u 11 y Google Chrome; Java ya va dentro. Se instala sin permisos de administrador, solo para tu usuario.
-3. Como no está firmado, Windows dirá "Windows protegió tu PC": *Más información → Ejecutar de todas formas*.
-4. Para actualizar, ejecuta el instalador nuevo: sustituye al anterior y tus datos (sesión, lista de usuarios, subidas) se conservan.
+**[⬇ Descargar JujaMaker para Windows](https://github.com/jesuscarrascofdzdev/jujamaker/releases/latest/download/JujaMaker-Setup.exe)** · [todas las versiones](https://github.com/jesuscarrascofdzdev/jujamaker/releases)
 
-## Publicar una versión
+- **Requisitos:** Windows 10 u 11 (64 bits) y [Google Chrome](https://www.google.com/chrome/). No hace falta instalar Java ni nada más: va dentro.
+- **Instalar:** abre `JujaMaker-Setup.exe`. Como el instalador no está firmado, Windows puede avisar con "Windows protegió tu PC": pulsa **Más información → Ejecutar de todas formas**. Se instala solo para tu usuario, sin permisos de administrador, con acceso directo en el escritorio y en el menú Inicio.
+- **Primer uso:** en la pantalla **Sesión**, pulsa **Iniciar sesión**, entra en MakerOnline en la ventana de Chrome que se abre y pulsa **Ya he entrado**. La sesión se queda guardada en tu ordenador.
+- **Actualizar:** descarga la versión nueva e instálala encima. Tu sesión y tus listas se conservan.
+- **Desinstalar:** Configuración de Windows → Aplicaciones → JujaMaker. Tus datos (sesión, listas, modelos pendientes) están aparte, en `%LOCALAPPDATA%\MakerOnline Desktop`: bórrala si quieres quitarlo todo.
 
-1. Sube `versionApp` en `desktop/build.gradle.kts` (por ejemplo `1.2.0` → `1.2.1`) y haz commit.
-2. Crea el instalador: `gradlew :desktop:crearInstalador`. Queda en el escritorio como `JujaMaker-<versión>.exe`.
-3. Prueba el `.exe` instalándolo (o con *Probar la app empaquetada*).
-4. Pon una etiqueta y súbela:
-   ```
-   git tag v1.2.1
-   git push origin main --tags
-   ```
-5. En GitHub: *Releases → Draft a new release*, elige la etiqueta `v1.2.1`, escribe qué cambia, adjunta `JujaMaker-1.2.1.exe` y pulsa *Publish release*.
+## Qué hace
+
+- **Subir:** preparas cada modelo (archivo `.3mf` o `.stl`, portada y descripción) en un formulario o arrastrando su carpeta, y la app lo sube a MakerOnline como borrador. Puedes revisarlo antes de guardar y elegir si ves Chrome mientras sube o si trabaja fuera de la pantalla.
+- **Descargar:** repasa los creadores que marques de tu lista, descarga sus modelos nuevos, les da like para no repetirlos y te deja todo en un zip en el escritorio. Espera de 10 a 30 segundos entre descarga y descarga.
+- **Sin IA,** o con la tuya: pega la descripción que te haya dado cualquier IA y el formulario se rellena solo, o conecta la app con Claude (pantalla Sesión).
+- La sesión de MakerOnline (perfil de Chrome) **nunca sale de tu ordenador**, y los captchas **no se saltan**: se enseña la ventana para que los resuelvas tú.
+
+> **Estado:** terminada (versión 1.3.0). Al descargar, la cuenta del creador de la app (juji-nya) va la primera: viene marcada y se puede desmarcar, pero no quitar.
 
 ---
 
@@ -121,6 +113,12 @@ La app instalada se puede usar desde tu Claude, con tu suscripción: Claude la a
     "args": ["--mcp"]
   }
   ```
+
+**Publicar una versión**
+1. Sube `versionApp` en `desktop/build.gradle.kts` (1.2.1, 1.3.0…) y ejecuta **Crear instalador**.
+2. Haz commit y push.
+3. En GitHub, *Releases → Draft a new release*: etiqueta `v<versión>`, título `JujaMaker <versión>` y las notas de la versión.
+4. Adjunta el instalador **con el nombre `JujaMaker-Setup.exe`** (renombra la copia del escritorio). Así el enlace de descarga directa (`…/releases/latest/download/JujaMaker-Setup.exe`, el del README y el del portfolio) baja siempre la última versión.
 
 **Desde la terminal (opcional)**
 - Compilar todo: `gradlew build`
