@@ -208,7 +208,7 @@ private fun PanelOpciones(d: EstadoDescarga) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(Textos.ULTIMOS, style = MaterialTheme.typography.bodySmall, color = Colores.textoClaro)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CampoPequeno(d.ultimos, { d.ultimos = it.filter(Char::isDigit).take(4) }, enabled = editable && !d.todos)
+                CampoPequeno(d.ultimos, { d.cambiarUltimos(it.filter(Char::isDigit).take(4)) }, enabled = editable && !d.todos)
                 Text(Textos.ULTIMOS_AYUDA, style = MaterialTheme.typography.bodyMedium, color = Colores.textoSuave)
             }
         }
@@ -217,7 +217,7 @@ private fun PanelOpciones(d: EstadoDescarga) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(Textos.MAXIMO, style = MaterialTheme.typography.bodySmall, color = Colores.textoClaro)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CampoPequeno(d.maximo, { d.maximo = it.filter(Char::isDigit).take(5) }, enabled = editable)
+                CampoPequeno(d.maximo, { d.cambiarMaximo(it.filter(Char::isDigit).take(5)) }, enabled = editable)
                 Text(Textos.MAXIMO_AYUDA, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
             }
         }

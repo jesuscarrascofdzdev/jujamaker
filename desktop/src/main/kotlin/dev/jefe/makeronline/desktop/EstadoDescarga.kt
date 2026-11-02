@@ -85,18 +85,40 @@ class EstadoDescarga(
     fun cargarAjustes() {
         incluirCreador = ajustes.incluirCreador
         desmarcados = ajustes.desmarcados
+        ultimos = ajustes.ultimosModelos.toString()
+        maximo = ajustes.maximoDescargas?.toString() ?: ""
     }
 
     // ------------------------------------------------------------ opciones (como en la terminal)
 
-    /** Cuántos de los últimos modelos de cada usuario se miran (texto del campo). */
-    var ultimos by mutableStateOf("10")
+    /** Cuántos de los últimos modelos de cada usuario se miran (texto del campo). Se recuerda. */
+    var ultimos by mutableStateOf(ajustes.ultimosModelos.toString())
+        private set
+
+    fun cambiarUltimos(texto: String) {
+        ultimos = texto
+        // Solo se guarda un número válido: a medio escribir (campo vacío) se queda el anterior
+        texto.toIntOrNull()?.takeIf { it >= 1 }?.let { ajustes.ultimosModelos = it }
+    }
+
     /** Mirar todos los modelos (más lento; útil la primera vez). */
     var todos by mutableStateOf(false)
     /** Descargar también el perfil de impresión (.3mf). */
     var perfil by mutableStateOf(false)
-    /** Máximo de descargas en esta vez (texto del campo; vacío = sin límite). */
-    var maximo by mutableStateOf("")
+
+    /** Máximo de descargas de cada vez (texto del campo; vacío = sin límite). Se recuerda. */
+    var maximo by mutableStateOf(ajustes.maximoDescargas?.toString() ?: "")
+        private set
+
+    fun cambiarMaximo(texto: String) {
+        maximo = texto
+        when {
+            texto.isBlank() -> ajustes.maximoDescargas = null // vacío = sin límite
+            (texto.toIntOrNull() ?: 0) >= 1 -> ajustes.maximoDescargas = texto.toInt()
+            // un 0 no vale: no se guarda (al descargar ya se avisa)
+        }
+    }
+
     var modo by mutableStateOf(Downloader.Modo.APARTADA)
 
     // ------------------------------------------------------------ ejecución

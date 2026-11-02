@@ -49,6 +49,22 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
+    /** En Descargar, cuántos de los últimos modelos de cada usuario se miran (por defecto, 10, como en la terminal). */
+    var ultimosModelos: Int
+        get() = valores.getProperty(ULTIMOS_MODELOS)?.toIntOrNull()?.takeIf { it >= 1 } ?: 10
+        set(v) {
+            valores.setProperty(ULTIMOS_MODELOS, v.toString())
+            guardar()
+        }
+
+    /** En Descargar, el máximo de descargas de cada vez; null = sin límite (por defecto). */
+    var maximoDescargas: Int?
+        get() = valores.getProperty(MAXIMO_DESCARGAS)?.toIntOrNull()?.takeIf { it >= 1 }
+        set(v) {
+            if (v == null) valores.remove(MAXIMO_DESCARGAS) else valores.setProperty(MAXIMO_DESCARGAS, v.toString())
+            guardar()
+        }
+
     private fun guardar() {
         try {
             Files.newBufferedWriter(archivo, Charsets.UTF_8).use { valores.store(it, "Ajustes de JujaMaker") }
@@ -61,5 +77,7 @@ class Ajustes(private val archivo: Path) {
         const val INCLUIR_CREADOR = "incluirCreador"
         const val DESMARCADOS = "usuariosDesmarcados"
         const val VER_CHROME_AL_SUBIR = "verChromeAlSubir"
+        const val ULTIMOS_MODELOS = "ultimosModelos"
+        const val MAXIMO_DESCARGAS = "maximoDescargas"
     }
 }

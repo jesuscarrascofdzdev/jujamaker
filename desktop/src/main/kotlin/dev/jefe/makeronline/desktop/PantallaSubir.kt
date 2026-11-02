@@ -130,6 +130,8 @@ fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope) {
     ) {
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Cabecera(Textos.SUBIR_TITULO, Textos.SUBIR_EXPLICACION, Modifier.weight(1f))
+            // Siempre a mano, también mientras sube: abre subidas/errores, con lo que no se ha podido subir
+            BotonSecundario(Textos.VER_ERRORES_SUBIDA, { abrir(rutas.errores) })
             BotonSuave(Textos.BOTON_AGREGAR_MODELO, { s.abrirModeloNuevo() }, enabled = !s.enMarcha)
             BotonSecundario(Textos.ANADIR_CARPETAS, {
                 val elegidas = elegirCarpetas(Textos.ELEGIR_CARPETAS)

@@ -210,6 +210,7 @@ object Textos {
             "subidos/ (o a errores/, con una captura, si algo falla)."
     fun pendientesTitulo(n: Int) = "Pendientes ($n)"
     const val ABRIR_PENDIENTES = "Abrir la carpeta"
+    const val VER_ERRORES_SUBIDA = "Ver errores"
     const val SOLTAR_AQUI =
         "Puedes arrastrar aquí carpetas de modelos (se copian; las tuyas no se tocan)."
     const val SUELTA_AHORA = "Suéltalas aquí"
