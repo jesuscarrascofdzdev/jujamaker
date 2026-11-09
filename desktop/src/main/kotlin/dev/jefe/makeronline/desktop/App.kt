@@ -1,6 +1,8 @@
 package dev.jefe.makeronline.desktop
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,14 +37,14 @@ import java.nio.file.Path
 
 /** La ventana: la barra de arriba (logo, pestañas y estado) y, debajo, la pantalla elegida. */
 @Composable
-fun App(app: EstadoApp) {
+fun App(app: EstadoApp, ventana: EstadoVentana) {
     // Las tareas con Chrome se lanzan aquí y no dentro de cada pantalla: así siguen en marcha
     // aunque cambies de pantalla (lo de dentro de una pantalla se cancela al salir de ella).
     val alcance = rememberCoroutineScope()
     TemaApp {
         Surface(Modifier.fillMaxSize(), color = Colores.fondo) {
             Column(Modifier.fillMaxSize()) {
-                BarraSuperior(app)
+                BarraSuperior(app, ventana)
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (app.pantalla) {
                         Pantalla.SESION -> PantallaSesion(app.sesion, app.datos, app.claude, alcance)
@@ -60,7 +62,7 @@ fun App(app: EstadoApp) {
  * lo que está haciendo Chrome (se vea la pantalla que se vea).
  */
 @Composable
-private fun BarraSuperior(app: EstadoApp) {
+private fun BarraSuperior(app: EstadoApp, ventana: EstadoVentana) {
     val logo = remember { cargarIcono() }
     Column(Modifier.fillMaxWidth().background(Colores.barra)) {
         Row(
@@ -107,9 +109,44 @@ private fun BarraSuperior(app: EstadoApp) {
                     val cuenta = app.descarga.indiceUsuario?.let { " $it/${app.descarga.totalUsuarios}" }.orEmpty()
                     Etiqueta(tarea + cuenta, Colores.acentoFondo, Colores.acentoTexto)
                 }
+                BotonModoVentana(ventana)
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Colores.bordeSuave))
+    }
+}
+
+/** El botón de la derecha de la barra: pasa de pantalla completa a ventana y al revés (con su texto de ayuda). */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BotonModoVentana(ventana: EstadoVentana) {
+    val enVentana = ventana.enVentana
+    val texto = if (enVentana) Textos.PASAR_A_PANTALLA_COMPLETA else Textos.PASAR_A_VENTANA
+    TooltipArea(
+        tooltip = {
+            val forma = RoundedCornerShape(6.dp)
+            Text(
+                texto,
+                style = MaterialTheme.typography.bodySmall,
+                color = Colores.texto,
+                modifier = Modifier.clip(forma)
+                    .background(Colores.tarjeta)
+                    .border(1.dp, Colores.bordeSuave, forma)
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+        },
+    ) {
+        Box(
+            Modifier.size(34.dp).clip(CircleShape).clickable(onClick = ventana::alternar),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (enVentana) Iconos.pantallaCompleta else Iconos.ventana,
+                contentDescription = texto,
+                tint = Colores.textoSuave,
+                modifier = Modifier.size(18.dp),
+            )
+        }
     }
 }
 

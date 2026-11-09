@@ -65,6 +65,34 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
+    /** Si la ventana se abre ocupando toda la pantalla (por defecto, sí, como siempre). */
+    var ventanaMaximizada: Boolean
+        get() = valores.getProperty(VENTANA_MAXIMIZADA)?.toBooleanStrictOrNull() ?: true
+        set(v) {
+            if (v == ventanaMaximizada) return
+            valores.setProperty(VENTANA_MAXIMIZADA, v.toString())
+            guardar()
+        }
+
+    /** Ancho y alto de la ventana la última vez que estuvo en modo ventana; null = el de siempre. */
+    var tamanoVentana: Pair<Int, Int>?
+        get() {
+            val ancho = valores.getProperty(VENTANA_ANCHO)?.toIntOrNull()?.takeIf { it >= 1 } ?: return null
+            val alto = valores.getProperty(VENTANA_ALTO)?.toIntOrNull()?.takeIf { it >= 1 } ?: return null
+            return ancho to alto
+        }
+        set(v) {
+            if (v == tamanoVentana) return
+            if (v == null) {
+                valores.remove(VENTANA_ANCHO)
+                valores.remove(VENTANA_ALTO)
+            } else {
+                valores.setProperty(VENTANA_ANCHO, v.first.toString())
+                valores.setProperty(VENTANA_ALTO, v.second.toString())
+            }
+            guardar()
+        }
+
     private fun guardar() {
         try {
             Files.newBufferedWriter(archivo, Charsets.UTF_8).use { valores.store(it, "Ajustes de JujaMaker") }
@@ -79,5 +107,8 @@ class Ajustes(private val archivo: Path) {
         const val VER_CHROME_AL_SUBIR = "verChromeAlSubir"
         const val ULTIMOS_MODELOS = "ultimosModelos"
         const val MAXIMO_DESCARGAS = "maximoDescargas"
+        const val VENTANA_MAXIMIZADA = "ventanaMaximizada"
+        const val VENTANA_ANCHO = "ventanaAncho"
+        const val VENTANA_ALTO = "ventanaAlto"
     }
 }

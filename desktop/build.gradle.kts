@@ -13,7 +13,7 @@ kotlin {
 
 // Versión de la app. Súbela en cada versión nueva (1.0.1, 1.1.0…): así el instalador sustituye
 // a la anterior. Va en el instalador y en el nombre del archivo que se deja en el escritorio.
-val versionApp = "1.3.0"
+val versionApp = "1.3.1"
 
 dependencies {
     implementation(project(":core"))

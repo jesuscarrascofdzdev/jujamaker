@@ -87,6 +87,20 @@ object Iconos {
         close()
     }
 
+    /** Cuatro esquinas hacia fuera (pasar a pantalla completa). */
+    val pantallaCompleta: ImageVector = icono("pantallaCompleta") {
+        moveTo(4f, 9f); lineTo(4f, 4f); lineTo(9f, 4f)
+        moveTo(15f, 4f); lineTo(20f, 4f); lineTo(20f, 9f)
+        moveTo(20f, 15f); lineTo(20f, 20f); lineTo(15f, 20f)
+        moveTo(9f, 20f); lineTo(4f, 20f); lineTo(4f, 15f)
+    }
+
+    /** Una ventana con su barra de título (pasar a modo ventana). */
+    val ventana: ImageVector = icono("ventana") {
+        moveTo(5f, 6f); lineTo(19f, 6f); lineTo(19f, 18f); lineTo(5f, 18f); close()
+        moveTo(5f, 10f); lineTo(19f, 10f)
+    }
+
     private fun icono(nombre: String, trazos: PathBuilder.() -> Unit): ImageVector =
         ImageVector.Builder(nombre, 24.dp, 24.dp, 24f, 24f)
             .path(

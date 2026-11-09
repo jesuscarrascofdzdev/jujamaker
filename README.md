@@ -23,7 +23,7 @@ Respeta las licencias de los modelos que descargues. Está basada en la herramie
 - **Sin IA,** o con la tuya: pega la descripción que te haya dado cualquier IA y el formulario se rellena solo, o conecta la app con Claude (pantalla Sesión).
 - La sesión de MakerOnline (perfil de Chrome) **nunca sale de tu ordenador**, y los captchas **no se saltan**: se enseña la ventana para que los resuelvas tú.
 
-> **Estado:** terminada (versión 1.3.0). Al descargar, la cuenta del creador de la app (juji-nya) va la primera: viene marcada y se puede desmarcar, pero no quitar.
+> **Estado:** terminada (versión 1.3.1). Al descargar, la cuenta del creador de la app (juji-nya) va la primera: viene marcada y se puede desmarcar, pero no quitar.
 
 ---
 

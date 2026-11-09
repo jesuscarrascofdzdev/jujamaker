@@ -12,6 +12,10 @@ object Textos {
     const val MENU_SUBIR = "Subir"
     const val MENU_DESCARGAR = "Descargar"
 
+    // ------------------------------------------------------------ modo de la ventana
+    const val PASAR_A_VENTANA = "Pasar a modo ventana"
+    const val PASAR_A_PANTALLA_COMPLETA = "Pasar a pantalla completa"
+
 
     // ------------------------------------------------------------ sesión
     const val SESION_TITULO = "Sesión"

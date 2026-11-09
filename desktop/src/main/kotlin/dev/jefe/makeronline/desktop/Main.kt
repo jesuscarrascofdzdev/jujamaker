@@ -1,13 +1,13 @@
 package dev.jefe.makeronline.desktop
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
+import java.awt.Dimension
 import javax.imageio.ImageIO
 import javax.swing.UIManager
 
@@ -25,18 +25,27 @@ fun main(args: Array<String>) {
     }
     val app = EstadoApp(EstadoApp.rutas())
     val icono = cargarIcono()
+    // Se abre como se dejó la última vez; la primera vez, maximizada (con el asistente a la izquierda hace falta anchura)
+    val ventana = EstadoVentana(app.ajustes)
     application {
         Window(
             onCloseRequest = {
+                ventana.guardar()
                 app.cerrar() // cierra Chrome si estaba abierto
                 exitApplication()
             },
             title = Textos.TITULO_APP,
             icon = icono,
-            // Se abre maximizada: con el asistente a la izquierda hace falta anchura
-            state = rememberWindowState(placement = WindowPlacement.Maximized, width = 1280.dp, height = 800.dp),
+            state = ventana.estado,
         ) {
-            App(app)
+            LaunchedEffect(Unit) {
+                window.minimumSize = Dimension(EstadoVentana.ANCHO_MINIMO, EstadoVentana.ALTO_MINIMO)
+            }
+            // Mientras se cambia el tamaño en modo ventana, se va apuntando para recordarlo al cerrar
+            LaunchedEffect(Unit) {
+                snapshotFlow { ventana.estado.size }.collect { ventana.anotarTamano() }
+            }
+            App(app, ventana)
         }
     }
 }
