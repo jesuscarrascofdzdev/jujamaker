@@ -23,7 +23,8 @@ import java.util.stream.Stream;
  *   <li>los textos: un .json (con el formato de info.json) o, si no hay .json, un .txt
  *       (ver TextosModelo).</li>
  * </ul>
- * Se ignoran los archivos que crea el propio programa (error.png, resultado.png, error.txt)
+ * Se ignoran los archivos que crea el propio programa (error.png, resultado.png, error.txt y los
+ * de Creality: subido-creality.txt, resultado-creality.png, error-creality.png, error-creality.txt)
  * y los del sistema (desktop.ini, Thumbs.db, ocultos).
  *
  * @param modelos  los .3mf y .stl, por orden alfabético
@@ -35,7 +36,9 @@ public record ModelFolder(Path dir, String name, List<Path> modelos, List<Path> 
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Set<String> IGNORADOS = Set.of(
-            "error.png", "resultado.png", "error.txt", "errores.txt", "desktop.ini", "thumbs.db");
+            "error.png", "resultado.png", "error.txt", "errores.txt", "desktop.ini", "thumbs.db",
+            // los que deja la subida a Creality (ver SubidorCreality)
+            "subido-creality.txt", "resultado-creality.png", "error-creality.png", "error-creality.txt");
     private static final Set<String> NOMBRES_PORTADA = Set.of("portada", "cover");
     private static final Comparator<Path> POR_NOMBRE =
             Comparator.comparing(p -> p.getFileName().toString().toLowerCase(Locale.ROOT));
