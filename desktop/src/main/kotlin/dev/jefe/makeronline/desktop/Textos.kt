@@ -373,6 +373,30 @@ object Textos {
         EstadoEnWeb.SIN_3MF -> "no va (solo .stl)"
     }
     const val COMO_CARPETA = "¿Cómo tiene que ser una carpeta?"
+    // ------------------------------------------------------------ Creality: los que ya están en MakerOnline
+    fun crealitySubidos(n: Int) =
+        (if (n == 1) "1 carpeta ya subida a MakerOnline (en subidos) aún no está" else "$n carpetas ya subidas a MakerOnline (en subidos) aún no están") +
+            " en Creality Cloud. Se suben con las mismas opciones de arriba (ver Chrome, revisar) y no se mueven."
+    const val CREALITY_SUBIDOS_BOTON = "Subir a Creality las de subidos"
+    const val CREALITY_SUBIDOS_NADA = "No hay ninguna carpeta en subidos que falte en Creality Cloud (con .3mf)."
+    // ------------------------------------------------------------ Printables (extensión de Chrome)
+    const val PR_TITULO = "Printables"
+    const val PR_EXPLICACION =
+        "Printables no deja entrar al Chrome de la app, así que se sube desde tu Chrome de siempre con la " +
+            "extensión de JujaMaker. Al pulsar \"Subir a Printables\" se abre tu Chrome y la extensión rellena cada " +
+            "modelo sola (como modelo original y sin IA), lo guarda como borrador y pasa sola al " +
+            "siguiente. Luego revisas los borradores en Printables y los publicas tú. Entran las carpetas de pendientes y de subidos que aún no están allí."
+    fun prCuenta(porSubir: Int, conProblemas: Int, subidas: Int) =
+        (if (porSubir == 1) "1 por subir" else "$porSubir por subir") +
+            (if (conProblemas > 0) " · $conProblemas con problemas" else "") +
+            " · $subidas ya en Printables"
+    fun prUltima(texto: String) = "Apuntado: $texto"
+    const val PR_ABRIR = "Subir a Printables"
+    const val PR_CARPETA_EXTENSION = "Carpeta de la extensión"
+    const val PR_INSTALAR =
+        "Instalarla (una vez): en Chrome abre chrome://extensions, activa \"Modo de desarrollador\", pulsa " +
+            "\"Cargar descomprimida\" y elige la carpeta de la extensión. Esta app tiene que estar abierta mientras subes. " +
+            "Si tu navegador por defecto no es Chrome, abre Printables en Chrome y pulsa \"Seguido\" en el panel."
     // ------------------------------------------------------------ ventana Descripción
     const val AGREGAR_DESCRIPCION = "Agregar descripción"
     const val EDITAR_DESCRIPCION = "Editar descripción"

@@ -50,7 +50,7 @@ fun App(app: EstadoApp, ventana: EstadoVentana) {
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (app.pantalla) {
                         Pantalla.SESION -> PantallaSesion(app.sesion, app.datos, app.claude, alcance)
-                        Pantalla.SUBIR -> PantallaSubir(app.subida, app.rutas, alcance, irASesion = { app.pantalla = Pantalla.SESION })
+                        Pantalla.SUBIR -> PantallaSubir(app.subida, app.rutas, alcance, irASesion = { app.pantalla = Pantalla.SESION }, printables = app.printables)
                         Pantalla.DESCARGAR -> PantallaDescargar(app.descargas, app.edicion, alcance, irASesion = { app.pantalla = Pantalla.SESION })
                     }
                 }
