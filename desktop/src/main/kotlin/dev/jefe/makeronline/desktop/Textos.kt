@@ -136,9 +136,45 @@ object Textos {
     // ------------------------------------------------------------ descargar
     const val DESCARGAR_TITULO = "Descargar"
     const val DESCARGAR_EXPLICACION =
-        "Repasa los usuarios de tu lista y descarga sus modelos nuevos (los que aún no tienen tu " +
-            "like). Al terminar cada uno le da like, así no se vuelve a bajar. Entre descarga y " +
-            "descarga espera de 10 a 30 segundos. Al terminar, lo descargado queda en un zip en tu escritorio."
+        "Marca de qué páginas quieres descargar y, en cada una, de qué usuarios. Descarga sus modelos " +
+            "nuevos, página a página, y al terminar cada uno le da like, así no se vuelve a bajar. Entre " +
+            "descarga y descarga espera de 10 a 30 segundos. Al terminar, todo queda en un zip en tu escritorio."
+    const val PAGINAS = "Páginas"
+    const val PAGINAS_AYUDA = "Se descarga de las marcadas, de izquierda a derecha"
+    const val USUARIOS = "Usuarios"
+    /** Debajo del nombre de cada página: cuántos usuarios hay marcados en su lista. */
+    fun fichaDescarga(marcados: Int) = when (marcados) {
+        0 -> "Ningún usuario marcado"
+        1 -> "1 usuario marcado"
+        else -> "$marcados usuarios marcados"
+    }
+    /** La pestaña de cada lista: "MakerOnline · 7/9". */
+    fun pestanaUsuarios(web: Web, marcados: Int, total: Int) = webCorta(web) + " · $marcados/$total"
+    fun pestanaSinDescargar(web: Web) =
+        "Ahora no se descarga de ${web.nombre}: márcala arriba, en Páginas (hace falta tener la sesión iniciada)."
+    /** El botón Descargar dice de dónde: "Descargar de MakerOnline", "Descargar de las dos"… */
+    fun botonDescargar(webs: List<Web>) = when (webs.size) {
+        0 -> DESCARGAR
+        1 -> "Descargar de " + webCorta(webs[0])
+        2 -> "Descargar de las dos"
+        else -> "Descargar de las ${webs.size}"
+    }
+    /** Al empezar con cada web, en los mensajes. */
+    fun empiezaWeb(web: Web) = "══════ ${web.nombre} ══════"
+    /** Un problema de una web en concreto: "MakerOnline: no hay usuarios en la lista." */
+    fun problemaEn(web: Web, problema: String) = webCorta(web) + ": " + problema.replaceFirstChar { it.lowercase() }
+    const val ERROR_NINGUNA_WEB_DESCARGA = "Marca al menos una página de la que descargar (arriba, en Páginas)."
+    fun errorMaximo(web: Web) =
+        "El máximo de descargas de ${webCorta(web)} tiene que ser un número de 1 en adelante, o dejarlo vacío."
+    const val TABLA_DESCARGADOS = "Descargados"
+    const val TABLA_SE_DESCARGARIAN = "Se bajarían"
+    const val TABLA_SOLO_LIKE = "Solo faltaba el like"
+    const val TABLA_YA_TENIAN_LIKE = "Ya tenían like"
+    /** Lo que no cabe en la tabla del resumen, por web (null si no hay nada que decir). */
+    fun notaResumen(web: Web, saltados: Int): String? = if (saltados == 0) null else when (web) {
+        Web.MAKERONLINE -> null
+        Web.CREALITY -> "Creality: $saltados no se bajan (de pago o sin perfil .3mf)."
+    }
     fun usuariosTitulo(n: Int) = "Usuarios ($n)"
     const val RECARGAR = "Recargar"
     const val LISTA_NO_EXISTE = "Todavía no hay lista de usuarios. Pulsa Editar para añadir el primero."
@@ -169,7 +205,7 @@ object Textos {
     const val USUARIO_HECHO = "✓ hecho"
     const val USUARIO_AHORA = "ahora"
     const val SIMULAR = "Simular"
-    const val SIMULAR_AYUDA = "Solo lista lo que descargaría; no descarga ni da like."
+    const val SIMULAR_AYUDA = "Solo lista lo que descargaría; no descarga nada ni da like."
     const val DESCARGAR = "Descargar"
     const val PARAR = "Parar"
     const val PARANDO = "Parando en cuanto se pueda sin dejar nada a medias…"
@@ -184,8 +220,6 @@ object Textos {
     const val SIN_MENSAJES = "Aquí irá apareciendo lo que hace."
     const val RESUMEN_SIMULACION = "Simulación terminada: no se ha descargado nada ni se ha dado ningún like."
     const val RESUMEN_PARADO = "Parado (lo has pedido tú). No se ha dejado nada a medias."
-    fun resumen(descargados: Int, soloLike: Int, yaTenian: Int, errores: Int) =
-        "$descargados descargados · $soloLike solo faltaba el like · $yaTenian ya tenían like · $errores con error"
     const val MOSTRAR_ZIP = "Mostrar el zip"
     const val CREANDO_ZIP = "Creando el zip en el escritorio…"
     fun zipCreado(nombre: String, modelos: Int) =
@@ -195,10 +229,23 @@ object Textos {
             "  Lo descargado no se ha perdido: irá en el zip de la próxima descarga."
     const val VER_ERRORES = "Ver detalle de errores"
     const val ERROR_ULTIMOS = "Pon cuántos de los últimos modelos quieres mirar (un número de 1 en adelante)."
-    const val ERROR_MAXIMO = "El máximo de descargas tiene que ser un número de 1 en adelante, o dejarlo vacío."
     const val ERROR_NINGUNO_MARCADO = "No hay ningún usuario marcado: marca al menos uno (o al creador de la app)."
     const val ERROR_LISTA_VACIA = "No hay usuarios en la lista."
-    const val ERROR_LISTA_ROTA = "Arregla usuarios.json antes de descargar (el error sale a la izquierda)."
+    const val ERROR_LISTA_ROTA = "Arregla usuarios.json antes de descargar (el error sale en su lista)."
+
+    // ------------------------------------------------------------ descargar: lista de Creality Cloud
+    const val CREALITY_CAMPO_AGREGAR = "Añadir un usuario: pega la dirección de su perfil"
+    const val CREALITY_AGREGAR_AYUDA =
+        "Por ejemplo https://www.crealitycloud.com/user/8286142150 (se copia de la barra del navegador, " +
+            "en su perfil). El nombre lo pone la app la primera vez que descarga."
+    const val CREALITY_LISTA_VACIA = "Todavía no hay nadie en esta lista. Añade el primero arriba."
+    fun crealityUsuarioSinNombre(id: Long?) = if (id == null) "Usuario sin número" else "Usuario $id"
+    fun crealityIdUsuario(id: Long) = "crealitycloud.com/user/$id"
+    const val CREALITY_QUE_BAJA =
+        "Baja los perfiles .3mf, la portada y los textos. De momento no baja los de pago ni los que solo tienen STL."
+    const val CREALITY_ERROR_LISTA_ROTA = "Arregla usuarios-creality.json antes de descargar (el error sale en su lista)."
+    const val CREALITY_ERROR_LISTA_VACIA = "No hay usuarios en la lista: añade al menos uno."
+    const val CREALITY_ERROR_NINGUNO_MARCADO = "No hay ningún usuario marcado: marca al menos uno."
 
     // ------------------------------------------------------------ editar la lista de usuarios
     const val EDITAR_TITULO = "Editar la lista de usuarios"

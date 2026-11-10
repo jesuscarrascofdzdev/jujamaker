@@ -26,6 +26,12 @@ class Rutas @JvmOverloads constructor(
     /** Lista de usuarios del Downloader. */
     val usuarios: Path get() = datos.resolve("usuarios.json")
 
+    /** Lista de usuarios de Creality Cloud de los que se descarga (aparte de la de MakerOnline). */
+    val usuariosCreality: Path get() = datos.resolve("usuarios-creality.json")
+
+    /** Como [registro], pero de Creality Cloud: un id de modelo por línea. */
+    val registroCreality: Path get() = datos.resolve("descargados-creality.txt")
+
     /** Ajustes de la app de escritorio que se recuerdan de una vez para otra. */
     val ajustes: Path get() = datos.resolve("ajustes.properties")
 

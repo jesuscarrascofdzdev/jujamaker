@@ -1,6 +1,6 @@
 # JujaMaker
 
-App de escritorio para subir modelos 3D a [MakerOnline](https://www.makeronline.com) y [Creality Cloud](https://www.crealitycloud.com), y descargarlos de MakerOnline, sin terminal, sin Maven y sin IntelliJ.
+App de escritorio para subir modelos 3D a [MakerOnline](https://www.makeronline.com) y [Creality Cloud](https://www.crealitycloud.com), y descargarlos de las dos, sin terminal, sin Maven y sin IntelliJ.
 
 > **App no oficial.** JujaMaker no tiene relación con Anycubic, MakerOnline, Creality ni Creality Cloud. Antes se llamaba MakerOnline Desktop.
 
@@ -18,6 +18,7 @@ Respeta las licencias de los modelos que descargues. Está basada en la herramie
 
 ## Qué hace
 
+- **Descargar:** arriba marcas de qué páginas descargar (MakerOnline, Creality Cloud; solo las que tienen sesión) y debajo, en una pestaña por página, de qué usuarios. Cada página tiene su propia lista (la de Creality se rellena pegando la dirección del perfil). Un solo botón Descargar va página a página, de izquierda a derecha, y deja todo en un zip en el escritorio. En Creality baja los perfiles `.3mf`, la portada y los textos; al terminar cada modelo le da like, como en MakerOnline, y además lo apunta en `descargados-creality.txt` para no repetirlo. No baja los de pago ni los que solo tienen STL.
 - **Subir:** preparas cada modelo (archivo `.3mf` o `.stl`, portada y descripción) en un formulario o arrastrando su carpeta, y la app lo sube a las webs que marques: a MakerOnline como borrador y a Creality Cloud como privado (solo con `.3mf`; Creality lo convierte sola). Cada web es una ficha que se marca o desmarca (solo las que tienen sesión), y cada carpeta enseña en qué webs está ya o qué le falta. Puedes revisar cada modelo antes de guardarlo y elegir si ves Chrome mientras sube o si trabaja fuera de la pantalla.
 - **Descargar:** repasa los creadores que marques de tu lista, descarga sus modelos nuevos, les da like para no repetirlos y te deja todo en un zip en el escritorio. Espera de 10 a 30 segundos entre descarga y descarga.
 - **Sin IA,** o con la tuya: pega la descripción que te haya dado cualquier IA y el formulario se rellena solo, o conecta la app con Claude (pantalla Sesión).
@@ -63,7 +64,7 @@ Arriba a la derecha, en el desplegable de ejecución, está la carpeta **MakerOn
 | Diagnóstico del formulario | Abre el formulario de subida y apunta en `diagnostico-formulario.txt` las licencias, categorías y tipos de impresión que ofrece la web, y de qué peticiones salen. No sube ni guarda nada |
 | Diagnóstico de Creality | Abre el formulario de subida de Creality Cloud; tú subes un modelo a mano y apunta en `diagnostico-creality.txt` sus campos, el desplegable de categorías y las peticiones (sin cookies, tokens ni datos de tu cuenta). Se maneja desde la consola con ENTER |
 | Subir a Creality (revisar) | Sube a Creality Cloud, como **privado**, las carpetas de `subidas/pendientes/` que tengan un `.3mf` (el mismo de MakerOnline: Creality lo convierte sola). Antes de enviar cada una te deja mirarla: ENTER la envía; `no` + ENTER no. No mueve las carpetas: apunta lo subido en `subido-creality.txt` dentro de cada una y no las vuelve a subir; si falla, deja `error-creality.txt` (en qué paso y por qué) y `error-creality.png`. Categoría traducida de la de MakerOnline; licencia siempre CC0 |
-| App de escritorio | Abre la app: pantallas Sesión, Subir (agregar, editar o eliminar modelos, escribir o pegar su descripción, arrastrar carpetas, subir, revisar con botones y parar) y Descargar (marcar o desmarcar cada usuario, con "Marcar todos" y "Desmarcar todos"; se recuerda; simular, descargar, parar con un botón y editar la lista de usuarios; al terminar deja lo descargado en un zip en el escritorio, `makeronline-31-10-2026.zip`, o `… (2).zip` si ya hay uno de ese día). Guarda sus datos en su propia carpeta (ver abajo), no en la del proyecto |
+| App de escritorio | Abre la app: pantallas Sesión, Subir (agregar, editar o eliminar modelos, escribir o pegar su descripción, arrastrar carpetas, subir, revisar con botones y parar) y Descargar (marcar o desmarcar cada usuario, con "Marcar todos" y "Desmarcar todos"; se recuerda; simular, descargar, parar con un botón y editar la lista de usuarios; al terminar deja lo descargado en un zip en el escritorio, `descargas-31-10-2026.zip`, o `… (2).zip` si ya hay uno de ese día). Guarda sus datos en su propia carpeta (ver abajo), no en la del proyecto |
 | Probar la app empaquetada | Abre la app tal como quedará instalada (con su propio Java dentro), sin instalarla |
 | Crear instalador | Crea el instalador de Windows (ver "Crear el instalador") |
 
