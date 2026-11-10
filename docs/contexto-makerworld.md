@@ -21,7 +21,7 @@ mismas carpetas de `subidas/pendientes/` que ya sube a MakerOnline y a Creality 
 ## Comprobado en la web (10/11/2026)
 
 Visto en el formulario real con una cuenta con sesión, subiendo un cubo `.stl` de prueba como borrador
-(borrador 10459950, "Prueba JujaMaker (borrar)"). Lo leído antes en la wiki y el foro está más abajo.
+(borrador 10459950, "Prueba JujaMaker (borrar)", ya borrado). Lo leído antes en la wiki y el foro está más abajo.
 
 **La web**: Next.js (`window.__NEXT_DATA__`) con componentes de MUI y el editor CKEditor 5. Cada sección del
 formulario tiene una clase fija `js-scroll-<campo>`, que es lo que usa el subidor en vez de los textos o de las
@@ -129,7 +129,8 @@ Fuentes: wiki de Bambu Lab ([cómo subir modelos](https://wiki.bambulab.com/en/m
 - [ ] Ver si salen captchas o límites con varias subidas seguidas.
 - [ ] Perfil de impresión (opcional, más adelante): solo si el `.3mf` es de Bambu Studio y la persona lo indica en
       los textos (y qué imagen es la foto real). El diagnóstico ya mira dentro de los `.3mf` para saberlo.
-- [ ] Borrar el borrador de prueba 10459950 en MakerWorld.
+- [x] Borrar el borrador de prueba 10459950 en MakerWorld (hecho el 10/11/2026: menú ⋮ del borrador → "Delete" →
+      `DELETE /api/v1/design-service/my/draft/<id>`; después el borrador sigue leyéndose con `status: 13`).
 
 ## Diagnóstico (si la web cambia)
 
