@@ -167,10 +167,11 @@ fun PantallaSubir(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     PanelRevision(s)
+                    // Arriba, para que se vea sin tener que bajar: MakerWorld va aparte (con la extensión)
+                    PanelMakerWorld(makerWorld)
                     PanelSubirAhora(s, alcance, irASesion)
                     PanelProgresoSubida(s)
                     PanelResumenSubida(s, rutas)
-                    PanelMakerWorld(makerWorld)
                     s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     PanelFormato()
                 }
