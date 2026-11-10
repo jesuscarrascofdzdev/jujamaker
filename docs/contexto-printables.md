@@ -56,7 +56,8 @@
   Toys & Games > Other Toys & Games** (decisión de la persona, 10/11/2026: una amplia que valga para todos;
   se puede cambiar en Printables antes de publicar).
 - **Additional tags**: `input[id^="f-tags-"]`, "Use space to separate tags". Se escribe y Enter (keydown) o espacio;
-  cada una es un `.badge`. "dos palabras" entra como dos etiquetas: la app ya las manda de una palabra.
+  cada una es un `.badge`. "dos palabras" entra como dos etiquetas. **Solo admite `[a-z0-9]`**: "scale-model",
+  "ABC", "año", "a_b", "x.y" no entran (sin aviso); "3d" sí. La app ya las manda así ("Scale-Model" → "scalemodel").
 - **Model origin**: radios `name=authorship` (Original / Remix / Reupload, `value=on`). **Was AI used**: radios
   `name=aiGenerated` (Yes / No). También casillas NSFW y Political. **No hacen falta para guardar el borrador** (se
   guardó sin marcarlos); la extensión no los toca: los marca la persona.
@@ -78,6 +79,8 @@ las normas: **no subir dos veces el mismo modelo** (por eso `subido-printables.t
 
 - [ ] Compilar en el PC, cargar la extensión y probar con un modelo de verdad (el .3mf de 13,8 MB de SKYLINE_GTR34).
 - [ ] Borrar los borradores de prueba 1908893, 1908897 y 1908899 (con la persona).
+- Primer modelo de verdad: SKYLINE_GTR34 → borrador 1908931 (10/11/2026). Se quedaron fuera 4 etiquetas con guion
+  (antes del arreglo) y la categoría se corrigió a mano a Other Toys & Games.
 
 ## Si la web cambia
 

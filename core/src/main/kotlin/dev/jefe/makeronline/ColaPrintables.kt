@@ -3,8 +3,10 @@ package dev.jefe.makeronline
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.text.Normalizer
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Los modelos que faltan por subir a Printables, para la extensión de Chrome (ver ServidorPrintables y
@@ -103,12 +105,14 @@ class ColaPrintables(private val rutas: Rutas) {
             CatalogoPrintables.LICENCIA_POR_DEFECTO
         }
 
-        // Printables separa las etiquetas por espacios ("Use space to separate tags", comprobado el
-        // 10/11/2026: "dos palabras" entra como "dos" y "palabras"), así que se separan ya aquí.
-        val etiquetas = meta.tags().flatMap { it.split(",") }.flatMap { it.trim().split(Regex("\\s+")) }
-            .map { it.trim() }.filter { it.isNotEmpty() }.distinctBy { it.lowercase() }
-        if (meta.tags().any { it.trim().contains(Regex("\\s")) }) {
-            avisos += "Printables no admite etiquetas con espacios: las de varias palabras van separadas."
+        // Printables separa las etiquetas por espacios ("Use space to separate tags": "dos palabras" entra
+        // como "dos" y "palabras") y solo admite minúsculas sin tilde y números: "scale-model", "ABC",
+        // "año", "a_b" o "x.y" no entran (comprobado el 10/11/2026). Por eso se dejan ya así aquí.
+        val originales = meta.tags().flatMap { it.split(",") }.map { it.trim() }.filter { it.isNotEmpty() }
+        val etiquetas = originales.flatMap { it.split(Regex("\\s+")) }.map { etiquetaPrintables(it) }
+            .filter { it.isNotEmpty() }.distinct()
+        if (originales.any { o -> o.split(Regex("\\s+")).any { etiquetaPrintables(it) != it } }) {
+            avisos += "Printables solo admite etiquetas de una palabra en minúsculas, sin tildes ni símbolos: se han adaptado."
         }
 
         val archivos = m.imagenes().mapIndexed { i, p -> Archivo(p.fileName.toString(), if (i == 0) Tipo.PORTADA else Tipo.FOTO) } +
@@ -206,6 +210,11 @@ class ColaPrintables(private val rutas: Rutas) {
         /** Dónde se edita un modelo en Printables (al guardar el borrador, la web salta ahí; 10/11/2026). */
         @JvmStatic
         fun direccionModelo(id: String): String = "$WEB/model/$id/edit"
+
+        /** Una etiqueta como la admite Printables: minúsculas, sin tildes y solo letras a-z y números ("Scale-Model" → "scalemodel"). */
+        @JvmStatic
+        fun etiquetaPrintables(etiqueta: String): String =
+            Normalizer.normalize(etiqueta.lowercase(Locale.ROOT), Normalizer.Form.NFD).replace(Regex("[^a-z0-9]"), "")
 
         /**
          * El resumen: la primera línea con texto de la descripción, cortada por una palabra si pasa de
