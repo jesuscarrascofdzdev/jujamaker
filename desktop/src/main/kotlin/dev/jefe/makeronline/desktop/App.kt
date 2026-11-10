@@ -51,7 +51,7 @@ fun App(app: EstadoApp, ventana: EstadoVentana) {
                     when (app.pantalla) {
                         Pantalla.SESION -> PantallaSesion(app.sesion, app.datos, app.claude, alcance)
                         Pantalla.SUBIR -> PantallaSubir(app.subida, app.rutas, alcance, irASesion = { app.pantalla = Pantalla.SESION })
-                        Pantalla.DESCARGAR -> PantallaDescargar(app.descarga, app.edicion, alcance)
+                        Pantalla.DESCARGAR -> PantallaDescargar(app.descargas, app.edicion, alcance, irASesion = { app.pantalla = Pantalla.SESION })
                     }
                 }
             }
@@ -102,7 +102,9 @@ private fun BarraSuperior(app: EstadoApp, ventana: EstadoVentana) {
                 // Las sesiones, en una sola etiqueta (cuando ya se han comprobado); al pulsarla, a Sesión
                 if (app.sesion.estado != null) EtiquetaSesiones(app.sesion) { app.pantalla = Pantalla.SESION }
                 app.ocupacion.tarea?.let { tarea ->
-                    val cuenta = app.descarga.indiceUsuario?.let { " $it/${app.descarga.totalUsuarios}" }.orEmpty()
+                    val d = app.descargas
+                    val cuenta = d.indiceUsuario?.let { " " + (d.webEnCurso?.let { w -> Textos.webCorta(w) + " " } ?: "") + "$it/${d.totalUsuarios}" }
+                        .orEmpty()
                     Etiqueta(tarea + cuenta, Colores.acentoFondo, Colores.acentoTexto)
                 }
                 BotonModoVentana(ventana)

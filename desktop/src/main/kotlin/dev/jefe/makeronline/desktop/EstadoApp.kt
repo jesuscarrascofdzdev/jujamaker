@@ -25,17 +25,22 @@ class EstadoApp(val rutas: Rutas) {
     /** Lo que se recuerda de una vez para otra (ajustes.properties). */
     val ajustes = Ajustes(rutas.ajustes)
     val subida = EstadoSubida(rutas, hilo, ocupacion, ajustes, sesion)
-    val descarga = EstadoDescarga(rutas, hilo, ocupacion, ajustes)
+    /** Pantalla Descargar: de qué webs, lo común y la descarga; cada web con su lista de usuarios. */
+    val descargas = EstadoDescargas(
+        rutas, hilo, ocupacion, ajustes, sesion,
+        EstadoDescarga(rutas, ajustes),
+        EstadoDescargaCreality(rutas, ajustes),
+    )
     /** La ventana de añadir y quitar usuarios (botón "Editar" de Descargar). */
-    val edicion = EstadoEdicion(rutas, hilo, ocupacion, descarga)
+    val edicion = EstadoEdicion(rutas, hilo, ocupacion, descargas.makerOnline)
     /** La tarjeta "Conectar con Claude" (pantalla Sesión). */
     val claude = EstadoClaude()
     /** Traer los datos de antes (pantalla Sesión). Después, todo se vuelve a leer. */
     val datos = EstadoDatos(rutas, hilo, ocupacion) { sesionTraida ->
         ajustes.recargar()
-        descarga.cargarAjustes()
+        descargas.cargarAjustes()
         subida.cargarAjustes()
-        descarga.cargarLista()
+        descargas.cargarListas()
         subida.cargar()
         if (sesionTraida) sesion.comprobar()
     }
@@ -45,7 +50,7 @@ class EstadoApp(val rutas: Rutas) {
     /** Al cerrar la ventana: para lo que esté en marcha, cierra Chrome y para el hilo del navegador. */
     fun cerrar() {
         subida.alCerrarApp()
-        descarga.alCerrarApp()
+        descargas.alCerrarApp()
         sesion.alCerrarApp()
         hilo.close()
     }
