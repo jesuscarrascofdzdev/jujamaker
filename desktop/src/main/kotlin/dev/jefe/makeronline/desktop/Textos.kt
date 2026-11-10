@@ -47,6 +47,7 @@ object Textos {
     fun comoSube(web: Web) = when (web) {
         Web.MAKERONLINE -> "Sube como borrador"
         Web.CREALITY -> "Sube como privado · solo carpetas con .3mf"
+        Web.MAKERWORLD -> "Sube como borrador (privado al publicarlo)"
     }
     const val CREALITY_NOTA = "Si la sesión caduca, la app te avisará al subir."
     const val INICIAR_SESION = "Iniciar sesión"
@@ -60,9 +61,14 @@ object Textos {
         "Se ha abierto Chrome en Creality Cloud. Pulsa el botón para iniciar sesión (arriba a la derecha) y " +
             "entra con tu cuenta. No inicies sesión en el propio Chrome (el botón de perfil de arriba a la " +
             "derecha), solo en la web. Cuando veas tu avatar en Creality Cloud, vuelve aquí."
+    const val INSTRUCCIONES_LOGIN_MAKERWORLD =
+        "Se ha abierto Chrome en MakerWorld. Pulsa \"Log In\" (arriba a la derecha) y entra con tu cuenta de " +
+            "Bambu Lab. No inicies sesión en el propio Chrome (el botón de perfil de arriba a la derecha), solo " +
+            "en la web. Cuando veas tu avatar en MakerWorld, vuelve aquí."
     fun instruccionesLogin(web: Web) = when (web) {
         Web.MAKERONLINE -> INSTRUCCIONES_LOGIN
         Web.CREALITY -> INSTRUCCIONES_LOGIN_CREALITY
+        Web.MAKERWORLD -> INSTRUCCIONES_LOGIN_MAKERWORLD
     }
     const val YA_HE_ENTRADO = "Ya he entrado"
     const val CANCELAR = "Cancelar"
@@ -229,13 +235,14 @@ object Textos {
     const val SUBIR_TITULO = "Subir"
     const val SUBIR_EXPLICACION =
         "Sube cada carpeta de pendientes (un modelo con su .3mf o .stl, una imagen y la descripción) a las webs " +
-            "que marques: a MakerOnline como borrador y a Creality Cloud como privado."
+            "que marques: a MakerOnline y MakerWorld como borrador y a Creality Cloud como privado."
     const val FORMATO_CARPETAS =
         "Los nombres de los archivos dan igual. La portada es la imagen que se llama portada, cover o como la " +
             "carpeta; si no, la primera. Los textos van en un .json o un .txt. A Creality Cloud solo se sube con " +
-            ".3mf. Cuando una carpeta está en todas las webs marcadas pasa a subidos/; si falla MakerOnline, a " +
-            "errores/ (con una captura). Si falla Creality, se queda en pendientes con error-creality.txt y la " +
-            "próxima vez solo se repite lo que falta."
+            ".3mf; a MakerWorld van los .stl y .3mf como archivos del modelo (sin perfil de impresión). Cuando una " +
+            "carpeta está en todas las webs marcadas pasa a subidos/; si falla MakerOnline, a errores/ (con una " +
+            "captura). Si falla Creality o MakerWorld, se queda en pendientes con error-creality.txt o " +
+            "error-makerworld.txt y la próxima vez solo se repite lo que falta."
     fun pendientesTitulo(n: Int) = "Pendientes ($n)"
     const val ABRIR_PENDIENTES = "Abrir la carpeta"
     const val VER_ERRORES_SUBIDA = "Ver errores"
@@ -264,6 +271,7 @@ object Textos {
     fun fichaWeb(web: Web) = when (web) {
         Web.MAKERONLINE -> "Borrador"
         Web.CREALITY -> "Privado · solo .3mf"
+        Web.MAKERWORLD -> "Borrador"
     }
     const val INICIAR_SESION_FLECHA = "Iniciar sesión →"
     const val IR_A_SESION = "Ir a Sesión →"
@@ -303,10 +311,17 @@ object Textos {
     fun sinCrealityPorStl(nombres: List<String>) =
         "No van a Creality Cloud porque solo tienen .stl: " + nombres.joinToString(", ")
     fun sinMakerOnline(nombres: List<String>) =
-        "No han ido a MakerOnline porque antes tienen que estar en Creality Cloud (siguen en pendientes): " +
+        "No han ido a MakerOnline porque antes tienen que estar en las otras webs marcadas (siguen en pendientes): " +
             nombres.joinToString(", ")
     fun pasanASubidos(n: Int) =
-        if (n == 1) "1 carpeta pasa a subidos (ya está en Creality Cloud)." else "$n carpetas pasan a subidos (ya están en Creality Cloud)."
+        if (n == 1) "1 carpeta pasa a subidos (ya está en todas las webs marcadas)." else "$n carpetas pasan a subidos (ya están en todas las webs marcadas)."
+    fun yaEstabanEnMakerWorld(n: Int) =
+        if (n == 1) "1 ya estaba en MakerWorld." else "$n ya estaban en MakerWorld."
+    const val ERRORES_MAKERWORLD_EN_LISTA =
+        "Las que han fallado en MakerWorld siguen en pendientes: en la lista tienen el enlace a su error " +
+            "(y el borrador a medias, si se llegó a crear)."
+    const val ANTES_DE_PUBLICAR_MAKERWORLD =
+        "En MakerWorld quedan como borrador: antes de publicar, marca Original o Remix y añade fotos reales de la pieza impresa."
     const val ERRORES_CREALITY_EN_LISTA =
         "Las que han fallado en Creality siguen en pendientes: en la lista tienen el enlace a su error."
     const val ABRIR_SUBIDOS = "Abrir subidos"
@@ -316,13 +331,14 @@ object Textos {
     fun webCorta(web: Web) = when (web) {
         Web.MAKERONLINE -> "MakerOnline"
         Web.CREALITY -> "Creality"
+        Web.MAKERWORLD -> "MakerWorld"
     }
     /** Las insignias de cada carpeta: "Creality · subido", "MakerOnline · espera a Creality"… */
     fun insignia(web: Web, estado: EstadoEnWeb) = webCorta(web) + " · " + when (estado) {
         EstadoEnWeb.SUBIDO -> "subido"
         EstadoEnWeb.ERROR -> "error · ver"
         EstadoEnWeb.FALTA -> "falta"
-        EstadoEnWeb.ESPERA -> "espera a Creality"
+        EstadoEnWeb.ESPERA -> "espera a las otras webs"
         EstadoEnWeb.SIN_3MF -> "no va (solo .stl)"
     }
     const val COMO_CARPETA = "¿Cómo tiene que ser una carpeta?"

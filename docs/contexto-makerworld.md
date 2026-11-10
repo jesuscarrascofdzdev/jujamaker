@@ -11,114 +11,132 @@ mismas carpetas de `subidas/pendientes/` que ya sube a MakerOnline y a Creality 
 
 | Pieza | Estado |
 |---|---|
-| `core/.../SubidorMakerWorld.kt` | Esqueleto: valida carpetas, no sube nada todavía |
-| `core/.../CatalogoMakerWorld.kt` | Esqueleto vacío |
-| `.run/subir-makerworld-revisar.run.xml` | Lanza el esqueleto en modo `--revisar` |
-| `core/.../DiagnosticoMakerWorld.kt` | Hecho, sin probar: falta lanzarlo en el PC con sesión (ver abajo) |
-| `.run/diagnostico-makerworld.run.xml` | Lanza el diagnóstico |
-| Integración en la app (enum `Web`, sesión, subida múltiple, pantallas) | Por hacer (salvo `ModelFolder`) |
+| `core/.../CatalogoMakerWorld.kt` | Hecho: categorías con id, licencias, límites y equivalencias desde MakerOnline |
+| `core/.../SubidorMakerWorld.kt` | Hecho, **sin compilar ni probar** con Playwright: falta en el PC (Windows + Chrome) |
+| `core/.../DiagnosticoMakerWorld.kt` | Hecho, sin probar. Ya no hace falta para empezar; sirve si la web cambia |
+| `Web`, `Sesion`, `SubidaMultiple` | Hecho, sin compilar |
+| desktop (`Ajustes`, `EstadoSesion`, `EstadoSubida`, `PantallaSubir`, `Iconos`, `Textos`) | Hecho, sin compilar |
+| `.run/subir-makerworld-revisar.run.xml`, `.run/diagnostico-makerworld.run.xml` | Hechos |
 
-## Qué hay que averiguar de la web (antes de programar la subida)
+## Comprobado en la web (10/11/2026)
 
-Con sesión iniciada en el perfil de Chrome de la app, y con un diagnóstico que lo vuelque a un `.txt`:
+Visto en el formulario real con una cuenta con sesión, subiendo un cubo `.stl` de prueba como borrador
+(borrador 10459950, "Prueba JujaMaker (borrar)"). Lo leído antes en la wiki y el foro está más abajo.
 
-- [ ] **Sesión:** qué cookie indica que hay sesión iniciada (en Creality era `model_token`) y en qué dominio.
-- [ ] **Página de subida:** la dirección exacta y los pasos del formulario (¿un asistente por pasos o una sola página?).
-- [ ] **Archivos:** ¿admite `.stl` o exige `.3mf`? ¿Pide un perfil de impresión de Bambu Studio dentro del `.3mf`?
-- [ ] **Borrador o privado:** si se puede guardar sin publicar (la app siempre deja la última palabra a la persona).
-- [ ] **Campos:** título, descripción (¿editor enriquecido?), etiquetas, portada(s) y su proporción, galería.
-- [ ] **Categorías:** lista con ids (de la página o de su API) → rellenar `CatalogoMakerWorld.CATEGORIAS`.
-- [ ] **Licencias:** textos exactos → `CatalogoMakerWorld.LICENCIAS`. Por defecto, la equivalente a CC0 si existe.
-- [ ] **Equivalencias:** cada categoría de `CatalogoMakerOnline` → una de MakerWorld (`DESDE_MAKERONLINE`).
-- [ ] **Cómo saber que ha ido bien:** respuesta o dirección final con el id del modelo, para `subido-makerworld.txt`.
-- [ ] **Captchas y límites:** si salen, cuándo, y cuántas subidas seguidas admite sin problemas.
-- [ ] **Normas de MakerWorld:** revisar sus términos sobre subidas automatizadas y contenido.
+**La web**: Next.js (`window.__NEXT_DATA__`) con componentes de MUI y el editor CKEditor 5. Cada sección del
+formulario tiene una clase fija `js-scroll-<campo>`, que es lo que usa el subidor en vez de los textos o de las
+clases `mw-css-…` (cambian con cada versión).
 
-## Lo que dice la documentación de Bambu Lab (leído el 10/11/2026, falta verlo en el formulario)
+**Sesión**
+- Sin sesión, `/en/my/models/publish` redirige (desde el servidor) a `/en/sign-in/service?cb=…`.
+- `GET /api/v1/design-user-service/my/preference` responde 200 con sesión y 401 sin ella → lo usa `Sesion`.
+- La cookie de la sesión es httpOnly: no se ve desde la página, por eso se pregunta a la API en vez de buscarla.
+- `__NEXT_DATA__.props.pageProps.session.user` existe cuando hay sesión.
+- Aviso de cookies en la primera visita: botón "Reject All".
+
+**Formulario** (`/en/my/models/publish`), en pasos:
+1. "Do you have a Bambu Studio file(.3mf) for this model?":
+   - "Yes (earn extra points reward)" (`value=true`): 3 pasos (Upload, Model Information, Print Profile
+     Information). Pide un .3mf en "Bambu Studio File (Print Profile)": *"Only 3mf files produced by Bambu Studio
+     are supported"*.
+   - "I have STL/CAD files or other types of 3MF files" (`value=false`): 2 pasos. **Es el que usa la app.**
+2. "Raw Model Files": `input[type=file][multiple]` que acepta
+   `.3ds .amf .dwg .dxf .f3d .factory .fcstd .iges .ipt .obj .ply .rsdoc .scad .shape .shapr .skp .sldasm .sldprt
+   .slvs .step .stl .stp .studio3 .zip .3mf .stpz`. Cada archivo sale con la casilla "Open Source" marcada.
+   "Does this model include a Laser & Cut model?" viene en "No".
+3. "Next Step" crea el borrador (`POST /api/v1/design-service/my/draft` → `{"id": …}`) y la página salta a
+   `/en/my/models/drafts/<id>/edit` ("Edit Model Draft").
+
+**Subida de archivos**: por cada archivo, `POST /api/v1/design-user-service/my/upload` responde
+`{cdnPrefix, urls:[dirección firmada]}` y la página lo sube por XHR a
+`or-cloud-makerworld-prod.s3.us-west-2.amazonaws.com`. Un `.stl` pide dos direcciones (el archivo y una miniatura
+.jpeg que hace la propia página); cada imagen, una.
+
+**Paso 2 · Model Information** (clase de cada sección entre paréntesis):
+- Origen (`js-scroll-modelSource`, `name=modelSource`): Original / Remix / Share (Share desactivado). Ninguno marcado.
+- Portadas (`js-scroll-cover`): "jpg/gif/png, ≤ 30MB. Please use real print photos". "Web/App cover 4:3"
+  (`div.dropzone`) y "App cover 3:4" (`div.dropzone.appUpload`). Al elegir imagen sale un diálogo de recorte
+  (cropper.js) con botón "Submit"; la 4:3 de una imagen cuadrada queda en 800×600.
+- Vídeo (`js-scroll-designVideo`): mp4/mov, máx. 30 s.
+- "Real life photos ( 0 / 16 )" (`js-scroll-realPictures`): "Upload ≥3 photos of the printed model, covering 3 views".
+- "Model Pictures ( 0 / 16 )" (`js-scroll-designPictures`): png/jpg/webp/gif, ≤ 30MB, 4:3 recomendado. Sin recorte.
+- "Model Name" (`js-scroll-title`, `input[name=title]`): contador "0/50".
+- "Category" (`js-scroll-categoryId`): autocompletado; solo se eligen subcategorías (ver catálogo).
+- "Tags (0 / 50)" (`js-scroll-tags`): se escribe y Enter; contador "0/100" por etiqueta.
+- "License" (`js-scroll-license`): cuatro preguntas (adaptaciones, uso comercial, redistribuir, solo Bambu Handy) y un
+  desplegable `input[name=license]`. Al elegir licencia en el desplegable, la web ajusta las preguntas (CC0 → Sí/Sí/Sí).
+  Por defecto: "Standard Digital File License".
+- "Visibility" (`.submitPrivate`): Public (por defecto) / Private.
+- "Description" (`js-scroll-summary`): CKEditor 5 (`.ck-editor__editable` con `ckeditorInstance`).
+- Además: Community Post, documentación, Exclusive Model Program ("Not Eligible" en la cuenta de prueba), BOM.
+- Botones: "Previous", **"Save to draft"**, "Publish".
+
+**Guardar**: "Save to draft" → `PUT /api/v1/design-service/my/draft/<id>` (200, sin cuerpo). Lo guardado se lee con
+`GET /api/v1/design-service/my/draft/<id>`: `title`, `categoryId`, `license`, `tags`, `summary`, `modelSource`,
+`modelFiles[]`, `cover` (4:3), `coverPortrait` (3:4), `realPictures`, `designPictures`,
+`designSetting.submitAsPrivate`, `status`… El subidor lo lee después de guardar para confirmarlo.
+
+**Licencias** (`data-value` del desplegable): `CC0`, `BY`, `BY-SA`, `BY-ND`, `BY-NC`, `BY-NC-SA`, `BY-NC-ND`,
+`Standard Digital File License`, `MakerWorld Exclusive License`, `Standard Digital File License - Community Use`,
+`Standard Digital File License - Platform Print Only (SDFL-PPO)`.
+
+**Categorías**: en `CatalogoMakerWorld.CATEGORIAS`, con su id (las opciones del autocompletado tienen
+`id, name, slug, parentId, parentName`).
+
+## Cómo sube la app a MakerWorld (SubidorMakerWorld)
+
+1. Abre `/en/my/models/publish` (si redirige a `/sign-in`, no hay sesión y se para).
+2. Elige "I have STL/CAD files…" → todos los `.stl` y `.3mf` de la carpeta a "Raw Model Files" → espera a que suban.
+3. "Next Step" → apunta el id del borrador.
+4. Portada de la carpeta en 4:3 y 3:4 (acepta el recorte), las demás imágenes a "Model Pictures" (hasta 16).
+5. Nombre (máx. 50), categoría (de la de MakerOnline), etiquetas (máx. 50 de 100 caracteres), licencia (la de los
+   textos; CC0 si no existe en MakerWorld), **Private**, descripción.
+6. Comprueba el formulario; con `--revisar`, se para.
+7. "Save to draft", y lee el borrador para comprobar lo guardado. Apunta `subido-makerworld.txt`
+   (id, dirección del borrador y fecha).
+
+**Lo que no hace, a propósito** (lo decide la persona en MakerWorld antes de publicar):
+- No marca Original/Remix.
+- No pone "Real life photos": la app no sabe qué imágenes son fotos reales de la pieza impresa.
+- No sube perfil de impresión: exige un .3mf de Bambu Studio y una foto real de esa impresión.
+- No publica.
+
+Si falla después de crear el borrador, `error-makerworld.txt` dice cuál es para completarlo o borrarlo a mano
+(si se repite la subida, se crea otro borrador).
+
+## Lo que dice la documentación de Bambu Lab (leído el 10/11/2026)
 
 Fuentes: wiki de Bambu Lab ([cómo subir modelos](https://wiki.bambulab.com/en/makerworld/tutorials/how-to-upload-models),
 [normas del perfil de impresión](https://wiki.bambulab.com/makerworld/tutorials/print-profile-upload)) y foro de Bambu Lab.
-Es documentación, no el formulario: cada punto se confirma con el diagnóstico antes de programarlo.
 
-**Archivos: dos zonas distintas, y ninguna exige una impresora concreta**
-- *Archivos del modelo* ("raw model files"): `.stl`, `.3mf` de cualquier programa, `.step`, `.obj`, `.zip`… No piden
-  impresora ni perfil. → Toda carpeta de pendientes/ se puede subir a MakerWorld, también las que solo tienen `.stl`
-  (el esqueleto las rechaza: hay que quitar esa condición).
-- *Perfil de impresión* ("print profile"): opcional. Solo vale un `.3mf` de **proyecto de Bambu Studio** (no el
-  "generic 3mf" exportado, ni `.gcode.3mf`; según el foro, tampoco el de OrcaSlicer). Si no, la web avisa
-  "The 3mf is not generated by Bambu Studio".
 - No hace falta un `.3mf` por impresora: MakerWorld vuelve a laminar el perfil en la nube y decide con qué impresoras
-  es compatible (la persona puede desmarcar alguna). Un perfil sirve para toda la serie (X1/P1…).
-- El laminado en la nube tiene límite de tiempo: modelos pesados fallan con "Slicing time of a certain plate exceeds
-  the limit". Si el perfil no pasa ese laminado, no se publica.
+  es compatible. Un perfil sirve para toda la serie (X1/P1…). El laminado en la nube tiene límite de tiempo.
+- El perfil tiene que ser el `.3mf` de proyecto de Bambu Studio (no el "generic 3mf" exportado ni `.gcode.3mf`;
+  según el foro, tampoco el de OrcaSlicer).
+- Perfil de impresión: al menos una foto real de la pieza impresa con ese perfil; sin ella se retira.
+- Desde el 05/02/2026 MakerWorld pide foto real en la portada (o un render fiel); si falta, puede limitar la
+  visibilidad del modelo.
+- Foro: si se publica en privado y luego se hace público, cuenta la fecha de la primera publicación → por eso la app
+  deja **borrador** (y privado marcado para cuando se publique).
 - Foro (sin confirmar): un `.3mf` guardado con la A1 seleccionada salía incompatible con P1S/X1; con P1S, no.
+- Normas del nombre del perfil: nada de "fast", "quick", "best", "perfect", "100%"… ni marcas.
 
-**Fotos**
-- Perfil de impresión: al menos **una foto real** de la pieza impresa con ese perfil, y se marca una casilla que lo
-  declara. Sin foto real, el perfil se retira.
-- Portada del modelo: desde el 05/02/2026 MakerWorld pide foto real o un render fiel a la pieza; si falta foto real,
-  puede limitar la visibilidad del modelo.
-- Foro: la portada pide proporción 4:3 (y hubo "web cover" y "app cover" separadas). Confirmar en el formulario.
+## Pendiente
 
-**Borrador o privado**
-- El formulario guarda borradores (sección "Drafts" del perfil) y el modelo tiene visibilidad privada.
-- Foro: si se publica en privado y luego se hace público, cuenta la fecha de la primera publicación. → Mejor dejarlo
-  en **borrador** si el formulario lo permite; privado solo si no.
+- [ ] Compilar en el PC (`gradlew build`) y arreglar lo que salga: el código no se ha podido compilar aquí.
+- [ ] Probar `Subir a MakerWorld (revisar)` con una carpeta de prueba, varias veces seguidas, y revisar los borradores.
+- [ ] Revisar las equivalencias de categorías (`CatalogoMakerWorld.EQUIVALENCIAS`, propuesta del 10/11/2026).
+- [ ] Ver si salen captchas o límites con varias subidas seguidas.
+- [ ] Perfil de impresión (opcional, más adelante): solo si el `.3mf` es de Bambu Studio y la persona lo indica en
+      los textos (y qué imagen es la foto real). El diagnóstico ya mira dentro de los `.3mf` para saberlo.
+- [ ] Borrar el borrador de prueba 10459950 en MakerWorld.
 
-**Campos que nombra la wiki**: nombre, categoría, licencia, visibilidad, descripción (admite vídeo pegando la URL),
-casilla NSFW, "Boost Me", "Community Post". Perfil: nombre, fotos, visibilidad, impresoras compatibles.
-Etiquetas y original/remix no salen en la wiki: mirar en el formulario.
+## Diagnóstico (si la web cambia)
 
-**Normas del nombre del perfil**: nada de "fast", "quick", "best", "perfect", "100%"… ni marcas.
-
-## Qué datos hacen falta por carpeta
-
-| Dato | De dónde sale | Nuevo |
-|---|---|---|
-| Título, descripción, etiquetas | `ModelMeta` (igual que MakerOnline/Creality) | No |
-| Categoría | `CatalogoMakerWorld.desdeMakerOnline` | Rellenar catálogo |
-| Licencia | `CatalogoMakerWorld.LICENCIAS` (la de CC0 o equivalente) | Rellenar catálogo |
-| Archivos del modelo | `ModelFolder.modelos` (`.stl` y `.3mf`) | No |
-| Portada y galería | `ModelFolder.imagenes` | Ver proporción y si recorta |
-| Original o remix (+ enlace si es remix) | — | Sí, si el formulario lo pide |
-| Perfil de impresión | `.3mf` de Bambu Studio de la carpeta | Saber si es de Bambu Studio y si la persona lo ha impreso |
-| Foto real del perfil | — | Sí: no se puede deducir; la casilla de "lo he impreso" no la marca la app por su cuenta |
-
-Propuesta: por defecto, subir solo como *archivos del modelo* (vale para todas las carpetas). El perfil de impresión,
-solo si el `.3mf` es de Bambu Studio **y** la persona lo indica en los textos (p. ej. un dato tipo "Perfil probado: sí"
-y qué imagen es la foto real). Para saber si un `.3mf` es de Bambu Studio sin abrir Chrome: mirar dentro del zip
-(`3D/3dmodel.model` → metadato `Application`, y `Metadata/project_settings.config` → impresora). Comprobarlo con un
-`.3mf` real de las carpetas antes de programarlo.
-
-## Dónde tocar para integrarlo en la app (visto en el código de Creality)
-
-**core**
-- `Web.kt`: añadir `MAKERWORLD("MakerWorld", "https://makerworld.com/")`. Ojo: hay `when (web)` exhaustivos en
-  desktop (`Iconos.kt`, `EstadoSesion.kt`, `EstadoSubida.kt`) que dejarán de compilar hasta que tengan su rama.
-- `Sesion.kt`: detectar la cookie de MakerWorld (como `tokenCreality`) y añadir `makerWorld` al estado.
-- `SubidaMultiple.kt`: decidir el orden. Ahora es Creality → MakerOnline porque el Uploader de MakerOnline
-  mueve la carpeta a `subidos/`. MakerWorld tiene que ir **antes** de MakerOnline (no mueve nada).
-- `ModelFolder.java`: hecho, ya ignora `subido-makerworld.txt`, `resultado-makerworld.png` y `error-makerworld.*`.
-
-**desktop**
-- `Ajustes.kt`: `subirMakerWorld` (como `subirCreality`).
-- `EstadoSesion.kt` / `PantallaSesion.kt`: botón de iniciar sesión y estado de MakerWorld.
-- `EstadoSubida.kt` / `PantallaSubir.kt`: casilla para subir a MakerWorld e insignias de estado por carpeta.
-- `Iconos.kt`, `Textos.kt`: icono y textos de MakerWorld.
-
-## Cómo lanzar el diagnóstico
-
-Configuración "Diagnóstico de MakerWorld" (carpeta MakerWorld en IntelliJ). Antes, deja en `subidas/pendientes/`
-una carpeta de prueba con un `.3mf` de Bambu Studio, un `.stl` y una foto.
-
-1. Mira los `.3mf` de pendientes/ sin abrir Chrome (si son de Bambu Studio y para qué impresora).
-2. Abre Chrome con el perfil de la app en MakerWorld: inicia sesión si hace falta y ve al formulario de subida. ENTER.
-3. Sube el modelo de prueba **a mano**. En cada paso: ENTER apunta los campos (y una captura de pantalla);
-   `d` + ENTER apunta el desplegable que tengas abierto (categorías, licencias…); `fin` + ENTER termina.
-4. Guarda como borrador (o privado si no hay borrador) y haz una captura después. No publiques.
-
-Resultado en la carpeta de datos: `diagnostico-makerworld.txt` y `diagnostico-makerworld-<n>.png` (ignorados en git).
-Con eso se rellenan las casillas de "Qué hay que averiguar" y `CatalogoMakerWorld`, con la fecha.
+Configuración "Diagnóstico de MakerWorld". Mira los `.3mf` de pendientes/ sin abrir Chrome, abre Chrome con el
+perfil de la app y, mientras subes un modelo a mano: ENTER apunta los campos (y una captura), `d` + ENTER el
+desplegable abierto, `fin` + ENTER termina. Resultado: `diagnostico-makerworld.txt` y `diagnostico-makerworld-<n>.png`
+en la carpeta de datos (ignorados en git).
 
 ## Pruebas
 
