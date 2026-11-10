@@ -14,7 +14,7 @@ import java.time.format.DateTimeFormatter
  * ver docs/contexto-makerworld.md), así que a MakerWorld se sube a mano en el Chrome de siempre y la
  * extensión rellena el formulario con lo que le da esta cola. La app no sube nada a MakerWorld.
  *
- * Están en la cola las carpetas válidas de pendientes/ **y de subidos/** que no tienen
+ * Están en la cola las carpetas válidas de pendientes/ y también de subidos/ que no tienen
  * `subido-makerworld.txt`: así MakerOnline no tiene que esperar a MakerWorld (al subir a MakerOnline la
  * carpeta pasa a subidos/, y desde ahí se sigue pudiendo subir a MakerWorld cuando quieras).
  *
