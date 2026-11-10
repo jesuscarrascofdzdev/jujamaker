@@ -108,20 +108,37 @@
       throw new Error('abre primero el formulario de subida (Upload → Publish Model)');
     }
 
-    // --- Paso 1: sin perfil de impresión, todos los archivos como "Raw Model Files"
-    paso('Eligiendo "No, I have STL/CAD files"');
-    await elegirSinPerfil();
+    // --- Paso 1: si hay un .3mf, se prueba como perfil de impresión ("Yes (earn extra points reward)");
+    // si MakerWorld no lo acepta, todo va a "Raw Model Files" ("No, I have STL/CAD files").
+    const unTresMf = modelos.find((f) => /\.3mf$/i.test(f.name));
+    let conPerfil = false;
+    if (unTresMf) {
+      paso('Eligiendo "Yes" y subiendo ' + unTresMf.name + ' como perfil de Bambu Studio');
+      await elegirOpcion(true);
+      conPerfil = await subirPerfil(unTresMf);
+      if (!conPerfil) {
+        contar('aviso', { texto: 'MakerWorld no acepta ' + unTresMf.name + ' como perfil de Bambu Studio: ' +
+          'va con los demás archivos a "Raw Model Files" (sin puntos extra).' });
+      }
+    }
+    if (!conPerfil) {
+      paso('Eligiendo "No, I have STL/CAD files"');
+      await elegirOpcion(false);
+    }
 
-    paso('Subiendo ' + modelos.length + ' archivo(s) del modelo');
-    const zona = await hasta(() => document.querySelector('main .js-scroll-modelFiles input[type=file]'),
-      'la zona de "Raw Model Files"');
-    const antesModelos = subidasS3();
-    ponerArchivos(zona, modelos);
-    await esperarSubidas(antesModelos, modelos.length, 'que se suban los archivos del modelo', 10 * 60000);
+    const crudos = conPerfil ? modelos.filter((f) => f !== unTresMf) : modelos;
+    if (crudos.length) {
+      paso('Subiendo ' + crudos.length + ' archivo(s) a "Raw Model Files"');
+      const zona = await hasta(() => document.querySelector('main .js-scroll-modelFiles input[type=file]'),
+        'la zona de "Raw Model Files"');
+      const antesModelos = subidasS3();
+      ponerArchivos(zona, crudos);
+      await esperarSubidas(antesModelos, crudos.length, 'que se suban los archivos del modelo', 10 * 60000);
+    }
 
     // --- Paso 2: al pulsar "Next Step" MakerWorld crea el borrador y salta a /my/models/drafts/<id>/edit
     paso('Pasando al paso 2 (MakerWorld crea el borrador)');
-    await elegirSinPerfil(); // por si React ha vuelto a pintar la pregunta mientras se subía
+    await elegirOpcion(conPerfil); // por si React ha vuelto a pintar la pregunta mientras se subía
     (await hasta(() => botonSiguiente(), 'el botón "Next Step"')).click();
     const enBorrador = await hasta(() => location.pathname.match(/\/my\/models\/drafts\/(\d+)\/edit/),
       'el paso 2 (el borrador)', 60000);
@@ -169,6 +186,12 @@
     editor.ckeditorInstance.setData(html(ficha.descripcion));
 
     vigilarGuardado(ficha, borrador);
+    if (conPerfil) {
+      // El paso 3 ("Print Profile Information") lo rellena MakerWorld con lo que lee del .3mf
+      // (nombre del perfil, fotos de las placas, impresora); la extensión no lo toca.
+      contar('aviso', { texto: 'Con perfil de Bambu Studio: antes de publicar, revisa el paso 3 ' +
+        '"Print Profile Information" (lo rellena MakerWorld con lo que lee del .3mf).' });
+    }
     contar('relleno', { borrador });
   }
 
@@ -179,28 +202,60 @@
   }
 
   /**
-   * Paso 1: "¿Tienes un archivo de Bambu Studio (.3mf)?" → "No, I have STL/CAD files".
-   * Al abrir la página no hay ninguna marcada y sin elegir no deja seguir ("Please select a type.").
-   * Si se pulsa antes de que React se haya hecho con la página, el círculo se marca pero React no se
-   * entera y no salen las zonas de subida; y con "Yes" sale además la zona .js-scroll-model3Mf.
-   * Por eso se busca la opción por su valor (value=false, sin depender del idioma), se espera a React
-   * y se repite hasta que está marcada, sale la zona "Raw Model Files" y no la del 3MF
-   * (comprobado el 10/11/2026).
+   * Paso 1: "Do you have a Bambu Studio file (.3mf) for this model?". Es la primera pregunta de la
+   * página, así que su opción es el primer input[type=radio] con ese valor: value=true es "Yes (earn
+   * extra points reward)" y value=false "I have STL/CAD files…" (se busca por valor, no por el texto,
+   * para no depender del idioma). Al abrir la página no hay ninguna marcada y sin elegir no deja
+   * seguir ("Please select a type."). Si se pulsa antes de que React se haya hecho con la página, el
+   * círculo se marca pero React no se entera y no cambian las zonas de subida. Por eso se espera a
+   * React y se repite hasta que está marcada y salen las zonas que tocan: con "Yes", la del perfil
+   * (.js-scroll-model3Mf) y "Raw Model Files"; con "No", solo "Raw Model Files" (comprobado el 10/11/2026).
    */
-  async function elegirSinPerfil() {
-    const opcionNo = () => document.querySelector('main input[type=radio][value=false]');
+  async function elegirOpcion(conPerfil) {
+    const opcion = () => document.querySelector('main input[type=radio][value=' + conPerfil + ']');
     const lista = () => {
-      const r = opcionNo();
+      const r = opcion();
+      const zonaPerfil = !!document.querySelector('main .js-scroll-model3Mf input[type=file]');
       return r && r.checked && document.querySelector('main .js-scroll-modelFiles input[type=file]') &&
-        !document.querySelector('main .js-scroll-model3Mf');
+        zonaPerfil === conPerfil;
     };
-    await hasta(() => conReact(opcionNo()), 'la pregunta del archivo .3mf (STL/CAD)');
+    await hasta(() => conReact(opcion()), 'la pregunta del archivo .3mf de Bambu Studio');
     for (let i = 0; i < 20 && !lista(); i++) {
-      const r = opcionNo();
+      const r = opcion();
       (r.closest('label') || r).click();
       await esperar(700);
     }
-    if (!lista()) throw new Error('no consigo marcar "No, I have STL/CAD files"; márcalo a mano y pulsa "Rellenar este"');
+    if (!lista()) {
+      throw new Error('no consigo marcar "' + (conPerfil ? 'Yes (earn extra points reward)' : 'I have STL/CAD files') +
+        '"; márcalo a mano y pulsa "Rellenar este"');
+    }
+  }
+
+  /**
+   * Sube el .3mf a "Bambu Studio File (Print Profile)". La propia página lo abre y comprueba (que lo ha
+   * hecho Bambu Studio, que no es un .3mf con G-code y que su impresora está en
+   * /api/v1/iot-service/api/slicer/device/compatibility; no hace falta que sea Bambu Lab: uno de una
+   * Anycubic Kobra Max pasó), sube las imágenes de las placas y rellena sola el perfil (profileTitle,
+   * printer, compatibility, details…). Cómo va lo dice el valor "uploading3mfStatus" del formulario:
+   * 1 subiendo, 2 bien, 3 error; si lo rechaza al abrirlo, se queda en 0 y sale un aviso arriba
+   * (comprobado el 10/11/2026). Devuelve si lo ha aceptado.
+   */
+  async function subirPerfil(archivo) {
+    const estado = () => {
+      const f = formik();
+      return f ? Number(f.values.uploading3mfStatus || 0) : 0;
+    };
+    ponerArchivos(document.querySelector('main .js-scroll-model3Mf input[type=file]'), [archivo]);
+    const fin0 = Date.now() + 20000; // si en 20 s no ha empezado a subir, es que no lo ha aceptado
+    while (estado() === 0 && Date.now() < fin0) await esperar(500);
+    const fin = Date.now() + 15 * 60000;
+    while (estado() === 1 && Date.now() < fin) await esperar(1000);
+    if (estado() === 2) {
+      await hasta(() => formik().values.model3Mf && formik().values.model3Mf.url, 'que se apunte el .3mf', 30000);
+      await esperar(1500);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -225,9 +280,10 @@
    * componente por encima del campo de etiquetas (comprobado el 10/11/2026).
    */
   function formik() {
-    const campo = document.querySelector('main .js-scroll-tags');
+    // en el paso 1 no está el campo de etiquetas: vale cualquier sección del formulario
+    const campo = document.querySelector('main .js-scroll-tags') || document.querySelector('main [class*="js-scroll-"]');
     let f = campo && campo[Object.keys(campo).find((k) => k.startsWith('__reactFiber'))];
-    for (let i = 0; i < 40 && f; i++, f = f.return) {
+    for (let i = 0; i < 60 && f; i++, f = f.return) {
       const v = f.memoizedProps && f.memoizedProps.value;
       if (v && typeof v.setFieldValue === 'function' && v.values) return v;
     }
@@ -313,7 +369,9 @@
         if (d.license !== ficha.licencia) problemas.push('la licencia guardada es ' + d.license);
         if (!(d.designSetting && d.designSetting.submitAsPrivate)) problemas.push('no está como privado');
         if (!d.cover || !d.coverPortrait) problemas.push('faltan portadas');
-        if (!d.modelFiles || d.modelFiles.length < ficha.archivos.filter((a) => a.tipo === 'modelo').length) {
+        // el .3mf que va como perfil de impresión se guarda en model3Mf, no en modelFiles
+        const subidos = (d.modelFiles || []).length + (d.model3Mf && d.model3Mf.url ? 1 : 0);
+        if (subidos < ficha.archivos.filter((a) => a.tipo === 'modelo').length) {
           problemas.push('faltan archivos del modelo');
         }
         contar('guardado', { borrador, problemas });

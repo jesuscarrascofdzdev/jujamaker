@@ -122,6 +122,26 @@ clases `mw-css-…` (cambian con cada versión).
 **Categorías**: en `CatalogoMakerWorld.CATEGORIAS`, con su id (las opciones del autocompletado tienen
 `id, name, slug, parentId, parentName`).
 
+**Con un .3mf de Bambu Studio: "Yes (earn extra points reward)"** (comprobado el 10/11/2026 con el .3mf de
+SKYLINE_GTR34, con la malla cambiada por un cubo; borradores de prueba 10462473 y 10462596, ya borrados):
+- Zonas: `.js-scroll-model3Mf input[type=file][accept=".3mf"]` (un archivo, máx. 200 MB) y "Raw Model Files"
+  (`.js-scroll-modelFiles`, opcional).
+- La página abre el .3mf ella misma (JSZip): `3D/3dmodel.model` con `Application` = `BambuStudio…`, no puede ser
+  un .3mf con G-code, y la impresora (`printer_settings_id` de `Metadata/project_settings.config`) tiene que estar
+  en `GET /api/v1/iot-service/api/slicer/device/compatibility?dev_setting_name=…`. **No hace falta impresora
+  Bambu Lab**: "Anycubic Kobra Max 0.4 nozzle" responde `{compatibility: {dev_model_name: "Anycubic-Kobra-Max"…}}`
+  y se acepta.
+- Si lo acepta, sube el .3mf y las imágenes de las placas y rellena sola `model3Mf`, `profileTitle`
+  ("0.2mm layer, 3 walls, 15% infill"), `printer`, `compatibility`, `projectSettings`, `details`. Estado en
+  `uploading3mfStatus` del formulario: 1 subiendo, 2 bien, 3 error; si lo rechaza al abrirlo se queda en 0 y
+  sale un aviso arriba. Un .3mf que no es de Bambu Studio sale como "0 byte / Retry".
+- "Next Step" crea el borrador igual. El paso 2 es el mismo; el último botón ya no es "Publish" sino
+  "Add Print Profile" (paso 3, "Print Profile Information"), y "Save to draft" sigue justo antes.
+- "Save to draft" en el paso 2 guarda todo, perfil incluido (`model3Mf`, `profileTitle`; `modelFiles` vacío).
+- La extensión: si la carpeta tiene un .3mf, elige "Yes" y lo sube como perfil; el resto va a "Raw Model
+  Files". Si MakerWorld no lo acepta, elige "I have STL/CAD files" y lo sube todo como archivos. El paso 3 no
+  lo toca (lo rellena MakerWorld con el .3mf): lo revisa la persona antes de publicar.
+
 **Lo que hace la extensión sin depender del idioma ni de las prisas** (comprobado el 10/11/2026, borradores de prueba
 10462080 y 10462166, ya borrados):
 - Pregunta del .3mf: al abrir la página no hay ninguna marcada y "Next Step" sin elegir da *"Please select a type."*.

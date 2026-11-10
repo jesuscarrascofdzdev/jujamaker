@@ -26,7 +26,10 @@ class ColaMakerWorld(private val rutas: Rutas) {
     data class Archivo(val nombre: String, val tipo: Tipo)
 
     enum class Tipo {
-        /** .stl o .3mf: van a "Raw Model Files". */
+        /**
+         * .stl, .3mf…: van a "Raw Model Files", salvo el primer .3mf, que la extensión prueba antes como
+         * perfil de Bambu Studio ("Yes (earn extra points reward)").
+         */
         MODELO,
         /** La portada: va a las dos portadas (4:3 y 3:4). */
         PORTADA,
