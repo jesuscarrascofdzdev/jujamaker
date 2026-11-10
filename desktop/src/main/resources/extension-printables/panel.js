@@ -2,8 +2,8 @@
 //
 // Pide a la app (por background.js) el siguiente modelo de la cola, se lo pasa a pagina.js para que
 // rellene el formulario y, cuando la persona pulsa "SAVE DRAFT" y lo guardado está bien, le dice a la
-// app que lo apunte como subido. La persona marca el origen del modelo y si se usó IA, revisa y guarda
-// cada modelo: el panel no guarda ni publica nada.
+// app que lo apunte como subido. La persona revisa y guarda cada modelo: el panel no guarda ni
+// publica nada.
 
 (() => {
   if (window.__jujamakerPanel) return;
@@ -16,7 +16,7 @@
   /**
    * Modo seguido: la app abre Printables con "#jujamaker-auto" y el panel rellena cada modelo solo; tras
    * "SAVE DRAFT" (y comprobado lo guardado) abre el formulario del siguiente y vuelve a empezar. La
-   * persona solo marca el origen y lo de la IA, y guarda. Se recuerda en esta pestaña (sessionStorage) entre una
+   * persona solo revisa y guarda. Se recuerda en esta pestaña (sessionStorage) entre una
    * página y la siguiente; se para con "Parar", si falla algo o si se acaba la cola.
    */
   const CLAVE_SEGUIDO = 'jujamaker-seguido';
@@ -122,7 +122,7 @@
       pararSeguido('lo has parado tú');
     } else {
       sessionStorage.setItem(CLAVE_SEGUIDO, '1');
-      anotar('Modo seguido: relleno cada modelo solo; tú marcas el origen y lo de la IA y pulsas "SAVE DRAFT".', 'bien');
+      anotar('Modo seguido: relleno cada modelo solo; tú revisas y pulsas "SAVE DRAFT".', 'bien');
       if (enFormulario()) rellenar(); else location.href = FORMULARIO;
     }
     pintarBotones();
@@ -205,8 +205,7 @@
         anotar(m.texto, 'aviso');
         break;
       case 'relleno':
-        anotar('Listo. Revisa el formulario, marca el origen del modelo (Original, Remix…) y si se usó IA, ' +
-          'y pulsa "SAVE DRAFT" (arriba tiene que poner DRAFT).', 'bien');
+        anotar('Listo. Revisa el formulario y pulsa "SAVE DRAFT" (arriba tiene que poner DRAFT).', 'bien');
         estado.textContent = 'Esperando a que pulses "SAVE DRAFT"';
         break;
       case 'guardado':

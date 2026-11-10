@@ -26,9 +26,9 @@
 
 1. En la app, "Subir a Printables" abre `https://www.printables.com/model/create#jujamaker-auto` (modo seguido).
 2. La extensión pide a la app el siguiente modelo y rellena: archivos, nombre, resumen, categoría, etiquetas,
-   descripción y licencia.
-3. La persona marca el origen ("Original model – I made it", "Remix…", "Reupload…") y si se usó IA, revisa y pulsa
-   **SAVE DRAFT** (arriba tiene que poner DRAFT).
+   descripción, licencia, origen "Original model – I made it" e IA "No — fully human-made" (decisión de la
+   persona, 10/11/2026: sus modelos son suyos y sin IA).
+3. La persona revisa y pulsa **SAVE DRAFT** (arriba tiene que poner DRAFT).
 4. La web salta a `/model/<id>/edit`; la extensión comprueba lo guardado, la app apunta `subido-printables.txt`
    (id, dirección, fecha) y, en modo seguido, abre el formulario del siguiente.
 
@@ -60,7 +60,8 @@
   "ABC", "año", "a_b", "x.y" no entran (sin aviso); "3d" sí. La app ya las manda así ("Scale-Model" → "scalemodel").
 - **Model origin**: radios `name=authorship` (Original / Remix / Reupload, `value=on`). **Was AI used**: radios
   `name=aiGenerated` (Yes / No). También casillas NSFW y Political. **No hacen falta para guardar el borrador** (se
-  guardó sin marcarlos); la extensión no los toca: los marca la persona.
+  guardó sin marcarlos). La extensión marca el primero de origen (Original) y el segundo de IA (No), por
+  posición; se guardan con el borrador.
 - **Description**: editor Tiptap (`.tiptap.ProseMirror`, con `.editor`): `editor.commands.setContent(html, true)`.
 - **License (required)**: `button[id^="f-license-"]` abre `.dropdown-menu` con `button.option`. Textos exactos con
   rayas "—" (ver `CatalogoPrintables.LICENCIAS`).

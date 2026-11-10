@@ -5,8 +5,8 @@
 // panel (panel.js) con window.postMessage y le va contando cómo va.
 //
 // Todo lo que toca del formulario está comprobado en Printables el 10/11/2026 (ver
-// docs/contexto-printables.md). No marca el origen del modelo ni si se usó IA (eso lo dice la
-// persona) y no pulsa "SAVE DRAFT" ni publica: eso lo hace la persona.
+// docs/contexto-printables.md). Marca "Original model – I made it" y "No — fully human-made" (lo
+// pidió la persona: sus modelos son suyos y sin IA). No pulsa "SAVE DRAFT" ni publica: eso lo hace la persona.
 
 (() => {
   if (window.__jujamakerPrintables) return; // por si se inyecta dos veces
@@ -169,11 +169,32 @@
     paso('Licencia: ' + ficha.licencia);
     await elegir(botonLicencia(), ficha.licencia, null, 'licencia');
 
+    paso('Origen: Original model · IA: No — fully human-made');
+    await marcarOrigenEIA();
+
     if (publicado() && publicado().checked) {
       contar('aviso', { texto: 'Arriba está marcado PUBLISHED: ponlo en DRAFT antes de guardar.' });
     }
     vigilarGuardado(ficha);
     contar('relleno', {});
+  }
+
+  /**
+   * "Model origin" (radios name=authorship: Original / Remix / Reupload) y "Was AI used to create this
+   * model?" (radios name=aiGenerated: Yes / No), en ese orden en la página y todos con value="on", así
+   * que se eligen por su posición: el primero de origen y el segundo de IA. Se guardan con el borrador
+   * (comprobado el 10/11/2026, al recargar la página siguen marcados).
+   */
+  async function marcarOrigenEIA() {
+    const origen = document.querySelectorAll('input[type=radio][name=authorship]');
+    const ia = document.querySelectorAll('input[type=radio][name=aiGenerated]');
+    if (origen.length !== 3 || ia.length !== 2) {
+      contar('aviso', { texto: 'No encuentro las preguntas de origen y de IA como esperaba: márcalas tú.' });
+      return;
+    }
+    origen[0].click();
+    ia[1].click();
+    await hasta(() => origen[0].checked && ia[1].checked, 'que se marquen el origen y lo de la IA', 5000);
   }
 
   function soltar(lista) {
