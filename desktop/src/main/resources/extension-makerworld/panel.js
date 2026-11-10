@@ -13,6 +13,25 @@
   const DE_PANEL = 'jujamaker-panel';
   const A_PANEL = 'jujamaker-pagina';
   const CLAVE_SALTADAS = 'jujamaker-saltadas';
+  /**
+   * Modo seguido: la app abre MakerWorld con "#jujamaker-auto" y el panel rellena cada modelo solo; tras
+   * "Save to draft" (y comprobado el borrador) abre el formulario del siguiente y vuelve a empezar. La
+   * persona solo marca Original o Remix y guarda. Se recuerda en esta pestaña (sessionStorage) entre una
+   * página y la siguiente; se para con "Parar", si falla algo o si se acaba la cola.
+   */
+  const CLAVE_SEGUIDO = 'jujamaker-seguido';
+  const MARCA_SEGUIDO = 'jujamaker-auto';
+  if (location.hash.includes(MARCA_SEGUIDO)) {
+    sessionStorage.setItem(CLAVE_SEGUIDO, '1');
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+  const seguido = () => sessionStorage.getItem(CLAVE_SEGUIDO) === '1';
+  function pararSeguido(motivo) {
+    if (!seguido()) return;
+    sessionStorage.removeItem(CLAVE_SEGUIDO);
+    if (motivo) anotar('Modo seguido parado: ' + motivo, 'aviso');
+    pintarBotones();
+  }
 
   let ficha = null; // la del modelo que toca
   let ocupado = false; // rellenando o comprobando
@@ -77,6 +96,7 @@
           <button class="abrir">Abrir formulario</button>
           <button class="saltar">Saltar</button>
           <button class="actualizar">↻</button>
+          <button class="seguido">Seguido</button>
         </div>
         <div class="registro"></div>
       </div>
@@ -98,6 +118,16 @@
     cargar();
   });
   $('.rellenar').addEventListener('click', () => rellenar());
+  $('.seguido').addEventListener('click', () => {
+    if (seguido()) {
+      pararSeguido('lo has parado tú');
+    } else {
+      sessionStorage.setItem(CLAVE_SEGUIDO, '1');
+      anotar('Modo seguido: relleno cada modelo solo; tú marcas Original o Remix y pulsas "Save to draft".', 'bien');
+      if (enFormulario()) rellenar(); else location.href = FORMULARIO;
+    }
+    pintarBotones();
+  });
 
   function anotar(texto, clase) {
     const linea = document.createElement('div');
@@ -114,6 +144,8 @@
     $('.saltar').disabled = ocupado || !ficha;
     $('.abrir').disabled = ocupado;
     $('.abrir').classList.toggle('oculto', enFormulario());
+    $('.seguido').textContent = seguido() ? 'Parar seguido' : 'Seguido';
+    $('.seguido').disabled = !ficha && !seguido();
   }
   // MakerWorld cambia de página sin recargar: se repintan los botones cada segundo
   setInterval(pintarBotones, 1000);
@@ -131,6 +163,7 @@
       estado.className = 'estado';
       modelo.textContent = ficha ? 'Siguiente: ' + ficha.titulo : 'No queda nada por subir.';
       if (ficha) (ficha.avisos || []).forEach((a) => anotar(a, 'aviso'));
+      if (!ficha) pararSeguido('no queda nada por subir');
     } catch (e) {
       ficha = null;
       estado.textContent = e.message;
@@ -185,6 +218,7 @@
         await guardado(m.borrador, m.problemas || []);
         break;
       case 'error':
+        pararSeguido('ha fallado algo');
         anotar('Error: ' + m.texto + (borradorActual ? ' (el borrador ' + borradorActual + ' se ha quedado a medias en MakerWorld)' : ''), 'error');
         ocupado = false;
         pintarBotones();
@@ -209,12 +243,24 @@
       ocupado = false;
       ficha = null;
       await cargar();
-      if (ficha) anotar('Pulsa "Abrir formulario" para el siguiente.');
+      if (ficha && seguido()) {
+        anotar('Abriendo el formulario del siguiente…');
+        setTimeout(() => { location.href = FORMULARIO; }, 1500);
+      } else if (ficha) {
+        anotar('Pulsa "Abrir formulario" para el siguiente.');
+      }
     } catch (e) {
+      pararSeguido('no se ha podido apuntar el modelo');
       anotar('No se ha podido apuntar en JujaMaker: ' + e.message, 'error');
     }
     pintarBotones();
   }
 
-  cargar();
+  // Al abrir el formulario en modo seguido, se rellena solo (con un momento para que cargue la página)
+  cargar().then(() => {
+    if (seguido() && ficha && enFormulario()) {
+      anotar('Modo seguido: relleno "' + ficha.titulo + '"', 'bien');
+      setTimeout(() => rellenar(), 1500);
+    }
+  });
 })();

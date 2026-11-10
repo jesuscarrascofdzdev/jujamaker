@@ -33,6 +33,9 @@ Printables (mismo filtro, más fuerte) y Thingiverse (su API prohíbe que la app
 4. "Rellenar este": elige "I have STL/CAD files", sube los `.stl`/`.3mf`, pasa al paso 2 (MakerWorld crea el
    borrador), pone las dos portadas (acepta el recorte), las demás imágenes en "Model Pictures", nombre,
    categoría, etiquetas (quita las que MakerWorld no admite), licencia, Private y descripción.
+   Con "Subir a MakerWorld" en la app se abre el formulario con `#jujamaker-auto` (**modo seguido**): el panel
+   rellena solo cada modelo y, tras guardar y comprobar el borrador, abre el formulario del siguiente. Se para
+   con "Parar seguido", si falla algo o si se acaba la cola.
 5. La persona marca **Original o Remix** (MakerWorld no deja guardar ni el borrador sin eso: "Please enter model
    origin"), revisa y pulsa **"Save to draft"**.
 6. La extensión lee el borrador guardado, comprueba nombre, categoría, licencia, privado, portadas y archivos, y

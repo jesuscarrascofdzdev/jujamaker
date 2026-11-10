@@ -546,7 +546,7 @@ private fun PanelMakerWorld(mw: EstadoMakerWorld) {
         }
         mw.ultima?.let { Text("✓ " + Textos.mwUltima(it), style = MaterialTheme.typography.bodySmall, color = Colores.verdeTexto) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BotonSecundario(Textos.MW_ABRIR, { abrirEnNavegador(ColaMakerWorld.FORMULARIO) })
+            BotonPrincipal(Textos.MW_ABRIR, { abrirEnNavegador(ColaMakerWorld.FORMULARIO_SEGUIDO) }, enabled = mw.porSubir > 0)
             BotonEnlace(Textos.MW_CARPETA_EXTENSION, { abrir(mw.carpetaExtension) })
         }
         Text(Textos.MW_INSTALAR, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)

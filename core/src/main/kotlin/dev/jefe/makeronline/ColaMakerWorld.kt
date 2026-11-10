@@ -183,6 +183,11 @@ class ColaMakerWorld(private val rutas: Rutas) {
         const val WEB = "https://makerworld.com"
         /** El formulario de subida (comprobado el 10/11/2026). */
         const val FORMULARIO = "$WEB/en/my/models/publish"
+        /**
+         * El formulario en "modo seguido": la extensión rellena cada modelo sola y, tras guardar, pasa al
+         * siguiente (la marca va tras "#", así MakerWorld ni la ve).
+         */
+        const val FORMULARIO_SEGUIDO = "$FORMULARIO#jujamaker-auto"
 
         /** Dentro de la carpeta del modelo: lo subido a MakerWorld (id del borrador, dirección y fecha). */
         const val REGISTRO = "subido-makerworld.txt"
