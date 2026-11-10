@@ -331,8 +331,8 @@ object Textos {
     const val PR_EXPLICACION =
         "Printables no deja entrar al Chrome de la app, así que se sube desde tu Chrome de siempre con la " +
             "extensión de JujaMaker. Al pulsar \"Subir a Printables\" se abre tu Chrome y la extensión rellena cada " +
-            "modelo sola (como modelo original y sin IA): tú revisas y pulsas \"SAVE DRAFT\", y pasa " +
-            "sola al siguiente. Entran las carpetas de pendientes y de subidos que aún no están allí."
+            "modelo sola (como modelo original y sin IA), lo guarda como borrador y pasa sola al " +
+            "siguiente. Luego revisas los borradores en Printables y los publicas tú. Entran las carpetas de pendientes y de subidos que aún no están allí."
     fun prCuenta(porSubir: Int, conProblemas: Int, subidas: Int) =
         (if (porSubir == 1) "1 por subir" else "$porSubir por subir") +
             (if (conProblemas > 0) " · $conProblemas con problemas" else "") +

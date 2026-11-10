@@ -28,7 +28,8 @@
 2. La extensión pide a la app el siguiente modelo y rellena: archivos, nombre, resumen, categoría, etiquetas,
    descripción, licencia, origen "Original model – I made it" e IA "No — fully human-made" (decisión de la
    persona, 10/11/2026: sus modelos son suyos y sin IA).
-3. La persona revisa y pulsa **SAVE DRAFT** (arriba tiene que poner DRAFT).
+3. La extensión pulsa **SAVE DRAFT** (solo si arriba está en DRAFT; si no, para y avisa). Lo pidió la persona
+   (10/11/2026) para subir todos seguidos sin tocar nada. Nunca publica: la persona revisa los borradores y publica.
 4. La web salta a `/model/<id>/edit`; la extensión comprueba lo guardado, la app apunta `subido-printables.txt`
    (id, dirección, fecha) y, en modo seguido, abre el formulario del siguiente.
 

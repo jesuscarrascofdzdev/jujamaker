@@ -6,7 +6,8 @@
 //
 // Todo lo que toca del formulario está comprobado en Printables el 10/11/2026 (ver
 // docs/contexto-printables.md). Marca "Original model – I made it" y "No — fully human-made" (lo
-// pidió la persona: sus modelos son suyos y sin IA). No pulsa "SAVE DRAFT" ni publica: eso lo hace la persona.
+// pidió la persona: sus modelos son suyos y sin IA). Al terminar pulsa "SAVE DRAFT" (también lo pidió,
+// para subir todos seguidos sin tocar nada), solo si arriba está en DRAFT. Nunca publica: eso lo hace la persona.
 
 (() => {
   if (window.__jujamakerPrintables) return; // por si se inyecta dos veces
@@ -172,11 +173,15 @@
     paso('Origen: Original model · IA: No — fully human-made');
     await marcarOrigenEIA();
 
-    if (publicado() && publicado().checked) {
-      contar('aviso', { texto: 'Arriba está marcado PUBLISHED: ponlo en DRAFT antes de guardar.' });
-    }
     vigilarGuardado(ficha);
     contar('relleno', {});
+    // Se guarda solo como borrador: si arriba pone PUBLISHED, no se pulsa nada y se avisa.
+    if (!publicado() || publicado().checked) {
+      throw new Error('arriba no está en DRAFT: ponlo en DRAFT y pulsa tú "SAVE DRAFT"');
+    }
+    paso('Guardando como borrador (SAVE DRAFT)');
+    await finSubidas('que se pueda pulsar "SAVE DRAFT"');
+    botonGuardar().click(); // vigilarGuardado comprueba lo guardado y avisa al panel
   }
 
   /**
@@ -262,7 +267,7 @@
   }
 
   /**
-   * Cuando la persona pulsa "SAVE DRAFT": desde el formulario nuevo la web salta a
+   * Cuando se pulsa "SAVE DRAFT" (lo pulsa la extensión al terminar, o la persona): desde el formulario nuevo la web salta a
    * /model/<id>/edit al guardar (comprobado el 10/11/2026); ahí se comprueba que lo que se ve es lo de
    * la ficha y se avisa al panel con el id. Si no salta, es que la web no lo ha guardado (le falta
    * algo): se dice qué campos marca en rojo. El origen del modelo y lo de la IA no hacen falta para

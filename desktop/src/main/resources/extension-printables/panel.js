@@ -1,9 +1,8 @@
 // JujaMaker · Printables — el panel que sale abajo a la derecha en Printables.
 //
 // Pide a la app (por background.js) el siguiente modelo de la cola, se lo pasa a pagina.js para que
-// rellene el formulario y, cuando la persona pulsa "SAVE DRAFT" y lo guardado está bien, le dice a la
-// app que lo apunte como subido. La persona revisa y guarda cada modelo: el panel no guarda ni
-// publica nada.
+// rellene el formulario y lo guarde como borrador ("SAVE DRAFT") y, si lo guardado está bien, le dice a
+// la app que lo apunte como subido. Nunca publica: la persona revisa los borradores y publica.
 
 (() => {
   if (window.__jujamakerPanel) return;
@@ -16,7 +15,7 @@
   /**
    * Modo seguido: la app abre Printables con "#jujamaker-auto" y el panel rellena cada modelo solo; tras
    * "SAVE DRAFT" (y comprobado lo guardado) abre el formulario del siguiente y vuelve a empezar. La
-   * persona solo revisa y guarda. Se recuerda en esta pestaña (sessionStorage) entre una
+   * persona solo abre la página: luego revisa los borradores en Printables y los publica. Se recuerda en esta pestaña (sessionStorage) entre una
    * página y la siguiente; se para con "Parar", si falla algo o si se acaba la cola.
    */
   const CLAVE_SEGUIDO = 'jujamaker-seguido';
@@ -122,7 +121,7 @@
       pararSeguido('lo has parado tú');
     } else {
       sessionStorage.setItem(CLAVE_SEGUIDO, '1');
-      anotar('Modo seguido: relleno cada modelo solo; tú revisas y pulsas "SAVE DRAFT".', 'bien');
+      anotar('Modo seguido: relleno y guardo como borrador cada modelo, uno tras otro.', 'bien');
       if (enFormulario()) rellenar(); else location.href = FORMULARIO;
     }
     pintarBotones();
@@ -205,8 +204,8 @@
         anotar(m.texto, 'aviso');
         break;
       case 'relleno':
-        anotar('Listo. Revisa el formulario y pulsa "SAVE DRAFT" (arriba tiene que poner DRAFT).', 'bien');
-        estado.textContent = 'Esperando a que pulses "SAVE DRAFT"';
+        anotar('Rellenado.', 'bien');
+        estado.textContent = 'Guardando como borrador…';
         break;
       case 'guardado':
         await guardado(m.modelo, m.problemas || []);
@@ -224,6 +223,7 @@
   async function guardado(modelo, problemas) {
     if (!ficha) return;
     if (problemas.length) {
+      pararSeguido('lo guardado no cuadra');
       anotar('Se ha guardado, pero: ' + problemas.join('; ') + '. Corrígelo y vuelve a pulsar "SAVE DRAFT".', 'error');
       return;
     }
