@@ -21,6 +21,7 @@ usuarios.json.bak
 usuarios.json.tmp
 ajustes.properties
 diagnostico-*.txt
+diagnostico-*.png
 descargados.txt
 **/resultado.png
 **/error.png

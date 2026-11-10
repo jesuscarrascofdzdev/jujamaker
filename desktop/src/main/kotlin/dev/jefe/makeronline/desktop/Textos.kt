@@ -326,6 +326,24 @@ object Textos {
         EstadoEnWeb.SIN_3MF -> "no va (solo .stl)"
     }
     const val COMO_CARPETA = "¿Cómo tiene que ser una carpeta?"
+    // ------------------------------------------------------------ MakerWorld (extensión de Chrome)
+    const val MW_TITULO = "MakerWorld"
+    const val MW_EXPLICACION =
+        "MakerWorld no deja entrar al Chrome de la app, así que se sube desde tu Chrome de siempre con la " +
+            "extensión de JujaMaker. Al pulsar \"Subir a MakerWorld\" se abre tu Chrome y la extensión rellena cada " +
+            "modelo sola: tú marcas Original o Remix, revisas y pulsas \"Save to draft\", y pasa sola al siguiente. " +
+            "Entran las carpetas de pendientes y de subidos que aún no están allí."
+    fun mwCuenta(porSubir: Int, conProblemas: Int, subidas: Int) =
+        (if (porSubir == 1) "1 por subir" else "$porSubir por subir") +
+            (if (conProblemas > 0) " · $conProblemas con problemas" else "") +
+            " · $subidas ya en MakerWorld"
+    fun mwUltima(texto: String) = "Apuntado: $texto"
+    const val MW_ABRIR = "Subir a MakerWorld"
+    const val MW_CARPETA_EXTENSION = "Carpeta de la extensión"
+    const val MW_INSTALAR =
+        "Instalarla (una vez): en Chrome abre chrome://extensions, activa \"Modo de desarrollador\", pulsa " +
+            "\"Cargar descomprimida\" y elige la carpeta de la extensión. Esta app tiene que estar abierta mientras subes. " +
+            "Si tu navegador por defecto no es Chrome, abre MakerWorld en Chrome y pulsa \"Seguido\" en el panel."
     // ------------------------------------------------------------ ventana Descripción
     const val AGREGAR_DESCRIPCION = "Agregar descripción"
     const val EDITAR_DESCRIPCION = "Editar descripción"

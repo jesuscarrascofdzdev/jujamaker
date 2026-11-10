@@ -56,10 +56,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.jefe.makeronline.ColaMakerWorld
 import dev.jefe.makeronline.Rutas
 import dev.jefe.makeronline.Web
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.RenderingHints
@@ -80,7 +82,13 @@ import javax.imageio.ImageIO
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope, irASesion: () -> Unit) {
+fun PantallaSubir(
+    s: EstadoSubida,
+    rutas: Rutas,
+    alcance: CoroutineScope,
+    irASesion: () -> Unit,
+    makerWorld: EstadoMakerWorld,
+) {
     // Cada vez que se abre la pantalla se vuelve a mirar pendientes/ (por si has cambiado algo)
     LaunchedEffect(Unit) {
         if (!s.enMarcha) s.cargar()
@@ -159,6 +167,8 @@ fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope, irASes
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     PanelRevision(s)
+                    // Arriba, para que se vea sin tener que bajar: MakerWorld va aparte (con la extensión)
+                    PanelMakerWorld(makerWorld)
                     PanelSubirAhora(s, alcance, irASesion)
                     PanelProgresoSubida(s)
                     PanelResumenSubida(s, rutas)
@@ -510,6 +520,37 @@ private fun PanelRevision(s: EstadoSubida) {
             BotonPrincipal(enviar, { s.guardarBorrador() })
             BotonSecundario(Textos.DESCARTAR, { s.descartar() })
         }
+    }
+}
+
+/**
+ * MakerWorld: se sube a mano en el Chrome de siempre con la extensión de JujaMaker, que rellena el
+ * formulario con los modelos de la cola (ver EstadoMakerWorld). Aquí se ve cuántos faltan.
+ */
+@Composable
+private fun PanelMakerWorld(mw: EstadoMakerWorld) {
+    // Mientras se ve la tarjeta, la cuenta se refresca sola (la extensión va apuntando lo que se sube)
+    LaunchedEffect(Unit) {
+        while (true) {
+            mw.actualizar()
+            delay(5_000)
+        }
+    }
+    Tarjeta(espacio = 10.dp) {
+        Text(Textos.MW_TITULO, style = MaterialTheme.typography.titleMedium)
+        Text(Textos.MW_EXPLICACION, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+        val error = mw.error
+        if (error != null) {
+            Text(error, color = MaterialTheme.colorScheme.error)
+        } else {
+            Text(Textos.mwCuenta(mw.porSubir, mw.conProblemas, mw.subidas), style = MaterialTheme.typography.bodyMedium)
+        }
+        mw.ultima?.let { Text("✓ " + Textos.mwUltima(it), style = MaterialTheme.typography.bodySmall, color = Colores.verdeTexto) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BotonPrincipal(Textos.MW_ABRIR, { abrirEnNavegador(ColaMakerWorld.FORMULARIO_SEGUIDO) }, enabled = mw.porSubir > 0)
+            BotonEnlace(Textos.MW_CARPETA_EXTENSION, { abrir(mw.carpetaExtension) })
+        }
+        Text(Textos.MW_INSTALAR, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
     }
 }
 
