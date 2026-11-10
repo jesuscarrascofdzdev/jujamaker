@@ -33,6 +33,8 @@ clases `mw-css-…` (cambian con cada versión).
 - La cookie de la sesión es httpOnly: no se ve desde la página, por eso se pregunta a la API en vez de buscarla.
 - `__NEXT_DATA__.props.pageProps.session.user` existe cuando hay sesión.
 - Aviso de cookies en la primera visita: botón "Reject All".
+- Cloudflare: al iniciar sesión desde el Chrome de la app salió "Verificación de seguridad en curso" (título "Un momento…",
+  recuadro "Verifique que es un ser humano"). No se salta: el subidor enseña la ventana y espera hasta 5 minutos.
 
 **Formulario** (`/en/my/models/publish`), en pasos:
 1. "Do you have a Bambu Studio file(.3mf) for this model?":

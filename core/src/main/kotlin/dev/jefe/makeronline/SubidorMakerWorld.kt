@@ -232,6 +232,7 @@ class SubidorMakerWorld(
         try {
             paso("Abrir el formulario de MakerWorld") {
                 page.navigate(FORMULARIO)
+                esperarVerificacion(page, ventana)
                 if (SIN_SESION in page.url()) throw SinSesion()
                 val opcion = page.locator("main input[type=radio][value=false]").first()
                 try {
@@ -362,6 +363,39 @@ class SubidorMakerWorld(
         } finally {
             page.offResponse(red)
         }
+    }
+
+    /**
+     * Si MakerWorld enseña la verificación de Cloudflare ("Just a moment…" / "Un momento…", con el
+     * recuadro "Verifique que es un ser humano"; vista el 10/11/2026 al iniciar sesión), no se salta:
+     * se trae la ventana de Chrome para que la resuelva la persona y se espera hasta 5 minutos.
+     */
+    private fun esperarVerificacion(page: Page, ventana: Downloader.Ventana?) {
+        if (!enVerificacion(page)) return
+        ventana?.mostrar()
+        progreso.captcha("MakerWorld (verificación de Cloudflare)", MINUTOS_VERIFICACION)
+        try {
+            val limite = System.currentTimeMillis() + MINUTOS_VERIFICACION * 60_000L
+            while (enVerificacion(page)) {
+                cancelacion.comprobar()
+                if (System.currentTimeMillis() > limite) {
+                    throw IllegalStateException("la verificación de Cloudflare no se ha resuelto en $MINUTOS_VERIFICACION minutos")
+                }
+                page.waitForTimeout(1000.0)
+            }
+            page.waitForLoadState()
+        } finally {
+            progreso.captchaTerminado()
+            ventana?.apartar()
+        }
+    }
+
+    /** Si la página es la de verificación de Cloudflare (su recuadro o su título). */
+    private fun enVerificacion(page: Page): Boolean = try {
+        page.locator("iframe[src*='challenges.cloudflare.com'], #challenge-form, #challenge-stage").count() > 0 ||
+            page.title().let { it.startsWith("Just a moment") || it.startsWith("Un momento") }
+    } catch (_: Exception) {
+        false
     }
 
     // ------------------------------------------------------------------ red
@@ -692,6 +726,8 @@ class SubidorMakerWorld(
         private const val FORMULARIO = "$WEB/en/my/models/publish"
         /** Sin sesión, el formulario manda aquí (comprobado el 10/11/2026). */
         private const val SIN_SESION = "/sign-in"
+        /** Lo que se espera a que la persona resuelva la verificación de Cloudflare. */
+        private const val MINUTOS_VERIFICACION = 5L
         /** Al pasar al paso 2, la página salta al borrador que acaba de crear. */
         private val BORRADOR: Pattern = Pattern.compile(".*/my/models/drafts/(\\d+)/edit.*")
         private val EXACTO_SUBMIT = exacto("Submit")
