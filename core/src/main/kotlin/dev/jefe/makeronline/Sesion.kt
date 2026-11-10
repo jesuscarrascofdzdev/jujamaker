@@ -8,10 +8,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Las sesiones de MakerOnline, Creality Cloud y MakerWorld guardadas en el perfil de Chrome (chrome-profile/).
+ * Las sesiones de MakerOnline y de Creality Cloud guardadas en el perfil de Chrome (chrome-profile/).
  *
- * - [comprobar] mira si Chrome está instalado, si la sesión de MakerOnline sirve, si hay sesión de
- *   Creality Cloud guardada y si MakerWorld acepta la suya.
+ * - [comprobar] mira si Chrome está instalado, si la sesión de MakerOnline sirve y si hay sesión de
+ *   Creality Cloud guardada.
  * - [abrirParaIniciar] abre Chrome en una de las webs para que la persona inicie sesión.
  * - [buscarUsuario] busca en MakerOnline a alguien para añadirlo a la lista de usuarios.
  *
@@ -30,7 +30,6 @@ class Sesion(private val rutas: Rutas) {
      * @property motivo          por qué no hay sesión, para enseñárselo a la persona
      * @property creality        si hay sesión de Creality Cloud guardada en Chrome (su cookie; se
      *                           comprueba de verdad al subir, en la propia página)
-     * @property makerWorld      si MakerWorld acepta la sesión guardada en Chrome
      */
     data class Estado(
         val chromeInstalado: Boolean,
@@ -38,7 +37,6 @@ class Sesion(private val rutas: Rutas) {
         val nombre: String? = null,
         val motivo: String? = null,
         val creality: Boolean = false,
-        val makerWorld: Boolean = false,
     )
 
     /**
@@ -69,8 +67,7 @@ class Sesion(private val rutas: Rutas) {
     /**
      * Comprueba Chrome y las sesiones. Abre Chrome sin ventana unos segundos para leer las cookies
      * del perfil y preguntar a MakerOnline si su sesión sigue valiendo. De Creality solo se mira si
-     * está su cookie (no se abre su web): si hubiera caducado, se avisa al subir. A MakerWorld se le
-     * pregunta con una petición de su API (ver [sesionMakerWorld]).
+     * está su cookie (no se abre su web): si hubiera caducado, se avisa al subir.
      *
      * @throws AgenteException si otro programa está usando Chrome (candado ocupado)
      */
@@ -83,10 +80,9 @@ class Sesion(private val rutas: Rutas) {
             Browsers.playwright().use { pw ->
                 Browsers.openChrome(pw, rutas.perfilChrome, 0.0, true, false).use { ctx ->
                     val creality = tokenCreality(ctx) != null
-                    val makerWorld = sesionMakerWorld(ctx)
                     val token = token(ctx)
                         ?: return Estado(chromeInstalado = true, iniciada = false, motivo = "no hay sesión iniciada",
-                            creality = creality, makerWorld = makerWorld)
+                            creality = creality)
                     // Mismo endpoint que usa la web al cargar tu perfil (comprobado el 31/10/2026)
                     val r = ctx.request().get(
                         "$WEB/api/user/personal/info",
@@ -94,7 +90,7 @@ class Sesion(private val rutas: Rutas) {
                             .setHeader("Authorization", token)
                             .setHeader("Accept", "application/json"),
                     )
-                    return interpretar(r.status(), r.text()).copy(creality = creality, makerWorld = makerWorld)
+                    return interpretar(r.status(), r.text()).copy(creality = creality)
                 }
             }
         }
@@ -174,21 +170,6 @@ class Sesion(private val rutas: Rutas) {
         /** El valor de la cookie de la sesión de Creality Cloud, o null si no hay (o ha caducado). */
         private fun tokenCreality(ctx: BrowserContext): String? =
             ctx.cookies(Web.CREALITY.inicio).firstOrNull { it.name == COOKIE_CREALITY && !it.value.isNullOrBlank() }?.value
-
-        /**
-         * Si MakerWorld acepta la sesión del perfil: su web pide tus preferencias a
-         * `api/v1/design-user-service/my/preference`, que responde 200 con sesión y 401 sin ella
-         * (comprobado el 10/11/2026). La cookie de su sesión no se ve desde la página (es httpOnly), así
-         * que se pregunta en vez de buscarla. Si no responde, se da por no iniciada.
-         */
-        private fun sesionMakerWorld(ctx: BrowserContext): Boolean = try {
-            ctx.request().get(
-                "${SubidorMakerWorld.WEB}/api/v1/design-user-service/my/preference",
-                RequestOptions.create().setHeader("Accept", "application/json").setTimeout(15_000.0),
-            ).status() == 200
-        } catch (_: Exception) {
-            false
-        }
 
         /** Lee la respuesta de api/user/personal/info: code 0 = sesión válida. */
         @JvmStatic

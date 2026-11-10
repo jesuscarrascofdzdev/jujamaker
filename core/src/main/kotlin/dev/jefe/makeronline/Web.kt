@@ -10,5 +10,4 @@ package dev.jefe.makeronline
 enum class Web(val nombre: String, val inicio: String) {
     MAKERONLINE("MakerOnline", "https://www.makeronline.com/en/"),
     CREALITY("Creality Cloud", "https://www.crealitycloud.com/"),
-    MAKERWORLD("MakerWorld", "https://makerworld.com/en"),
 }

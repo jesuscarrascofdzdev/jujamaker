@@ -12,7 +12,7 @@ import java.time.format.DateTimeFormatter
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Lo que enseña la pantalla Sesión y lo que hacen sus botones (MakerOnline, Creality Cloud y MakerWorld).
+ * Lo que enseña la pantalla Sesión y lo que hacen sus botones (MakerOnline y Creality Cloud).
  *
  * Las funciones `suspend` se llaman desde la ventana: el trabajo con Chrome va al hilo del
  * navegador y, al volver, el estado se cambia ya en el hilo de la ventana.
@@ -58,21 +58,16 @@ class EstadoSesion(
     /** Si hay sesión de Creality Cloud guardada en Chrome. */
     val creality: Boolean get() = estado?.creality == true
 
-    /** Si MakerWorld acepta la sesión guardada en Chrome. */
-    val makerWorld: Boolean get() = estado?.makerWorld == true
-
     /** Si hay sesión en esa web. */
     fun iniciada(web: Web): Boolean = when (web) {
         Web.MAKERONLINE -> makerOnline
         Web.CREALITY -> creality
-        Web.MAKERWORLD -> makerWorld
     }
 
-    /** El nombre de la cuenta en esa web, si se sabe (de Creality y MakerWorld solo se mira que haya sesión). */
+    /** El nombre de la cuenta en esa web, si se sabe (de Creality solo se mira que haya sesión). */
     fun cuenta(web: Web): String? = when (web) {
         Web.MAKERONLINE -> estado?.nombre
         Web.CREALITY -> null
-        Web.MAKERWORLD -> null
     }
 
     /** Si se pueden pulsar los botones: Chrome no está haciendo otra cosa (por ejemplo, descargar). */

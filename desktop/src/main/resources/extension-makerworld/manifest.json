@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "JujaMaker · MakerWorld",
+  "version": "1.0.0",
+  "description": "Rellena el formulario de subida de MakerWorld con los modelos que prepara JujaMaker. Tú revisas y guardas cada uno.",
+  "host_permissions": ["http://127.0.0.1:47811/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://makerworld.com/*"],
+      "js": ["pagina.js"],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://makerworld.com/*"],
+      "js": ["panel.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -39,7 +39,7 @@ public record ModelFolder(Path dir, String name, List<Path> modelos, List<Path> 
             "error.png", "resultado.png", "error.txt", "errores.txt", "desktop.ini", "thumbs.db",
             // los que deja la subida a Creality (ver SubidorCreality)
             "subido-creality.txt", "resultado-creality.png", "error-creality.png", "error-creality.txt",
-            // los que dejará la subida a MakerWorld (ver SubidorMakerWorld)
+            // el que deja la extensión de MakerWorld (ver ColaMakerWorld; los demás, por si acaso)
             "subido-makerworld.txt", "resultado-makerworld.png", "error-makerworld.png", "error-makerworld.txt");
     private static final Set<String> NOMBRES_PORTADA = Set.of("portada", "cover");
     private static final Comparator<Path> POR_NOMBRE =

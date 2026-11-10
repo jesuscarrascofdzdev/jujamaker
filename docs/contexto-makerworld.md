@@ -9,14 +9,48 @@ mismas carpetas de `subidas/pendientes/` que ya sube a MakerOnline y a Creality 
 
 ## Estado
 
+**Enfoque (10/11/2026): a MakerWorld no sube la app, sube la persona con una extensión de Chrome.**
+MakerWorld (Cloudflare) no deja entrar al Chrome que maneja la app: en la portada sale "Verificación de seguridad en
+curso" y la casilla vuelve a salir en bucle aunque la marque la persona. MakerOnline y Creality también usan
+Cloudflare pero no tienen ese filtro. Disfrazar el Chrome automatizado sería saltarse la protección: no se hace.
+Printables (mismo filtro, más fuerte) y Thingiverse (su API prohíbe que la app suba a otras webs) se descartaron.
+
 | Pieza | Estado |
 |---|---|
-| `core/.../CatalogoMakerWorld.kt` | Hecho: categorías con id, licencias, límites y equivalencias desde MakerOnline |
-| `core/.../SubidorMakerWorld.kt` | Hecho, **sin compilar ni probar** con Playwright: falta en el PC (Windows + Chrome) |
-| `core/.../DiagnosticoMakerWorld.kt` | Hecho, sin probar. Ya no hace falta para empezar; sirve si la web cambia |
-| `Web`, `Sesion`, `SubidaMultiple` | Hecho, sin compilar |
-| desktop (`Ajustes`, `EstadoSesion`, `EstadoSubida`, `PantallaSubir`, `Iconos`, `Textos`) | Hecho, sin compilar |
-| `.run/subir-makerworld-revisar.run.xml`, `.run/diagnostico-makerworld.run.xml` | Hechos |
+| `core/.../CatalogoMakerWorld.kt` | Hecho: categorías con id, licencias, límites, equivalencias desde MakerOnline |
+| `core/.../ColaMakerWorld.kt` | Hecho: carpetas de pendientes/ y subidos/ sin `subido-makerworld.txt`, su ficha y sus archivos |
+| `core/.../ServidorMakerWorld.kt` | Hecho: servidor en 127.0.0.1:47811 para la extensión (también programa de terminal) |
+| `desktop/src/main/resources/extension-makerworld/` | Hecha. `pagina.js` probado contra MakerWorld real el 10/11/2026 (relleno completo y guardado) |
+| desktop: `EstadoMakerWorld` + tarjeta "MakerWorld" en Subir | Hecho, sin compilar |
+| `.run/cola-makerworld.run.xml` | La cola sin la app, para probar |
+
+## Cómo se sube a MakerWorld
+
+1. La app, al abrirse, copia la extensión a `<datos>/extension-makerworld/` y arranca el servidor de la cola.
+2. Una vez: en Chrome, `chrome://extensions` → "Modo de desarrollador" → "Cargar descomprimida" → esa carpeta.
+3. En tu Chrome normal, MakerWorld → formulario de subida (`/en/my/models/publish`). Sale el panel de JujaMaker
+   abajo a la derecha con el siguiente modelo de la cola.
+4. "Rellenar este": elige "I have STL/CAD files", sube los `.stl`/`.3mf`, pasa al paso 2 (MakerWorld crea el
+   borrador), pone las dos portadas (acepta el recorte), las demás imágenes en "Model Pictures", nombre,
+   categoría, etiquetas (quita las que MakerWorld no admite), licencia, Private y descripción.
+5. La persona marca **Original o Remix** (MakerWorld no deja guardar ni el borrador sin eso: "Please enter model
+   origin"), revisa y pulsa **"Save to draft"**.
+6. La extensión lee el borrador guardado, comprueba nombre, categoría, licencia, privado, portadas y archivos, y
+   le dice a la app que lo apunte (`subido-makerworld.txt`: id, dirección del borrador y fecha).
+
+La cola incluye subidos/: MakerOnline no espera a MakerWorld (SubidaMultiple sigue como estaba).
+
+**Seguridad del servidor**: solo escucha en 127.0.0.1. Las peticiones que cambian algo (POST) tienen que llevar
+`Origin: chrome-extension://…`, que una web no puede poner. Solo sirve los archivos de las fichas de la cola.
+
+**Detalles comprobados para la extensión (10/11/2026)**
+- Las etiquetas no se añaden escribiendo y mandando Enter desde un script (el campo solo hace caso al teclado de
+  verdad). Se ponen en el formulario, que es de Formik: su `setFieldValue('tags', …)` está en las props de un
+  componente por encima de `.js-scroll-tags`. El mismo componente tiene `forbiddenWords` (marcas: "POP MART"…).
+- Formik también tiene `coverIsUploading`, `appCoverIsUploading`, `picturesIsUploading`, `rawModelFileIsUploading`.
+- Las subidas a S3 se ven en `performance.getEntriesByType('resource')` (una por archivo; un `.stl`, dos).
+- En el paso 1 cada archivo subido sale como `[class*="js-scroll-modelFiles-"]`.
+- Borrar un borrador: `DELETE /api/v1/design-service/my/draft/<id>` (después se lee con `status: 13`).
 
 ## Comprobado en la web (10/11/2026)
 
@@ -85,27 +119,6 @@ clases `mw-css-…` (cambian con cada versión).
 **Categorías**: en `CatalogoMakerWorld.CATEGORIAS`, con su id (las opciones del autocompletado tienen
 `id, name, slug, parentId, parentName`).
 
-## Cómo sube la app a MakerWorld (SubidorMakerWorld)
-
-1. Abre `/en/my/models/publish` (si redirige a `/sign-in`, no hay sesión y se para).
-2. Elige "I have STL/CAD files…" → todos los `.stl` y `.3mf` de la carpeta a "Raw Model Files" → espera a que suban.
-3. "Next Step" → apunta el id del borrador.
-4. Portada de la carpeta en 4:3 y 3:4 (acepta el recorte), las demás imágenes a "Model Pictures" (hasta 16).
-5. Nombre (máx. 50), categoría (de la de MakerOnline), etiquetas (máx. 50 de 100 caracteres), licencia (la de los
-   textos; CC0 si no existe en MakerWorld), **Private**, descripción.
-6. Comprueba el formulario; con `--revisar`, se para.
-7. "Save to draft", y lee el borrador para comprobar lo guardado. Apunta `subido-makerworld.txt`
-   (id, dirección del borrador y fecha).
-
-**Lo que no hace, a propósito** (lo decide la persona en MakerWorld antes de publicar):
-- No marca Original/Remix.
-- No pone "Real life photos": la app no sabe qué imágenes son fotos reales de la pieza impresa.
-- No sube perfil de impresión: exige un .3mf de Bambu Studio y una foto real de esa impresión.
-- No publica.
-
-Si falla después de crear el borrador, `error-makerworld.txt` dice cuál es para completarlo o borrarlo a mano
-(si se repite la subida, se crea otro borrador).
-
 ## Lo que dice la documentación de Bambu Lab (leído el 10/11/2026)
 
 Fuentes: wiki de Bambu Lab ([cómo subir modelos](https://wiki.bambulab.com/en/makerworld/tutorials/how-to-upload-models),
@@ -125,21 +138,15 @@ Fuentes: wiki de Bambu Lab ([cómo subir modelos](https://wiki.bambulab.com/en/m
 
 ## Pendiente
 
-- [ ] Compilar en el PC (`gradlew build`) y arreglar lo que salga: el código no se ha podido compilar aquí.
-- [ ] Probar `Subir a MakerWorld (revisar)` con una carpeta de prueba, varias veces seguidas, y revisar los borradores.
+- [ ] Compilar en el PC (`gradlew build`) y arreglar lo que salga.
+- [ ] Instalar la extensión y subir la carpeta de prueba `prueba-makerworld` con la app abierta.
 - [ ] Revisar las equivalencias de categorías (`CatalogoMakerWorld.EQUIVALENCIAS`, propuesta del 10/11/2026).
-- [ ] Ver si salen captchas o límites con varias subidas seguidas.
-- [ ] Perfil de impresión (opcional, más adelante): solo si el `.3mf` es de Bambu Studio y la persona lo indica en
-      los textos (y qué imagen es la foto real). El diagnóstico ya mira dentro de los `.3mf` para saberlo.
-- [x] Borrar el borrador de prueba 10459950 en MakerWorld (hecho el 10/11/2026: menú ⋮ del borrador → "Delete" →
-      `DELETE /api/v1/design-service/my/draft/<id>`; después el borrador sigue leyéndose con `status: 13`).
+- [ ] Perfil de impresión (más adelante, opcional): solo `.3mf` de Bambu Studio y con foto real.
 
-## Diagnóstico (si la web cambia)
+## Si la web cambia
 
-Configuración "Diagnóstico de MakerWorld". Mira los `.3mf` de pendientes/ sin abrir Chrome, abre Chrome con el
-perfil de la app y, mientras subes un modelo a mano: ENTER apunta los campos (y una captura), `d` + ENTER el
-desplegable abierto, `fin` + ENTER termina. Resultado: `diagnostico-makerworld.txt` y `diagnostico-makerworld-<n>.png`
-en la carpeta de datos (ignorados en git).
+`pagina.js` se puede probar a mano: con el formulario abierto, desde la consola de Chrome,
+`window.__jujamakerRellenar(ficha, [{tipo: 'modelo'|'portada'|'foto', file}])`.
 
 ## Pruebas
 

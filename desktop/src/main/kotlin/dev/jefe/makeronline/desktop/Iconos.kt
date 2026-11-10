@@ -74,14 +74,6 @@ object Iconos {
         close()
     }
 
-    /** Una impresora 3D: el marco con la boquilla encima de la cama (MakerWorld). */
-    val impresora: ImageVector = icono("impresora") {
-        moveTo(4f, 20f); lineTo(4f, 4f); lineTo(20f, 4f); lineTo(20f, 20f); close()
-        moveTo(4f, 8f); lineTo(20f, 8f)
-        moveTo(10f, 8f); lineTo(14f, 8f); lineTo(12f, 11.5f); close()
-        moveTo(7f, 17f); lineTo(17f, 17f)
-    }
-
     /** Una marca de "hecho" (fichas marcadas en Subir). */
     val check: ImageVector = icono("check") {
         moveTo(5f, 12f); lineTo(10f, 17f); lineTo(19f, 7f)
@@ -91,7 +83,6 @@ object Iconos {
     fun de(web: Web): ImageVector = when (web) {
         Web.MAKERONLINE -> cubo
         Web.CREALITY -> nube
-        Web.MAKERWORLD -> impresora
     }
 
     /** Dos eslabones (Conectar con Claude). */

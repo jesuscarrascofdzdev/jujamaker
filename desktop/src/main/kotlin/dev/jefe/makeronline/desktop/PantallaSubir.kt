@@ -56,10 +56,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.jefe.makeronline.ColaMakerWorld
 import dev.jefe.makeronline.Rutas
 import dev.jefe.makeronline.Web
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.RenderingHints
@@ -80,7 +82,13 @@ import javax.imageio.ImageIO
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope, irASesion: () -> Unit) {
+fun PantallaSubir(
+    s: EstadoSubida,
+    rutas: Rutas,
+    alcance: CoroutineScope,
+    irASesion: () -> Unit,
+    makerWorld: EstadoMakerWorld,
+) {
     // Cada vez que se abre la pantalla se vuelve a mirar pendientes/ (por si has cambiado algo)
     LaunchedEffect(Unit) {
         if (!s.enMarcha) s.cargar()
@@ -162,6 +170,7 @@ fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope, irASes
                     PanelSubirAhora(s, alcance, irASesion)
                     PanelProgresoSubida(s)
                     PanelResumenSubida(s, rutas)
+                    PanelMakerWorld(makerWorld)
                     s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     PanelFormato()
                 }
@@ -513,6 +522,37 @@ private fun PanelRevision(s: EstadoSubida) {
     }
 }
 
+/**
+ * MakerWorld: se sube a mano en el Chrome de siempre con la extensión de JujaMaker, que rellena el
+ * formulario con los modelos de la cola (ver EstadoMakerWorld). Aquí se ve cuántos faltan.
+ */
+@Composable
+private fun PanelMakerWorld(mw: EstadoMakerWorld) {
+    // Mientras se ve la tarjeta, la cuenta se refresca sola (la extensión va apuntando lo que se sube)
+    LaunchedEffect(Unit) {
+        while (true) {
+            mw.actualizar()
+            delay(5_000)
+        }
+    }
+    Tarjeta(espacio = 10.dp) {
+        Text(Textos.MW_TITULO, style = MaterialTheme.typography.titleMedium)
+        Text(Textos.MW_EXPLICACION, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+        val error = mw.error
+        if (error != null) {
+            Text(error, color = MaterialTheme.colorScheme.error)
+        } else {
+            Text(Textos.mwCuenta(mw.porSubir, mw.conProblemas, mw.subidas), style = MaterialTheme.typography.bodyMedium)
+        }
+        mw.ultima?.let { Text("✓ " + Textos.mwUltima(it), style = MaterialTheme.typography.bodySmall, color = Colores.verdeTexto) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BotonSecundario(Textos.MW_ABRIR, { abrirEnNavegador(ColaMakerWorld.FORMULARIO) })
+            BotonEnlace(Textos.MW_CARPETA_EXTENSION, { abrir(mw.carpetaExtension) })
+        }
+        Text(Textos.MW_INSTALAR, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+    }
+}
+
 @Composable
 private fun PanelProgresoSubida(s: EstadoSubida) {
     if (!s.enMarcha) return
@@ -533,7 +573,6 @@ private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
     val r = s.resumen ?: return
     val pequeno = MaterialTheme.typography.bodySmall
     val creality = r.creality
-    val makerWorld = r.makerWorld
     val makerOnline = r.makerOnline
     val conError = makerOnline?.carpetasConError().orEmpty()
     Tarjeta(espacio = 10.dp) {
@@ -550,14 +589,6 @@ private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
                     ((creality?.sinSubir ?: 0) + r.sin3mf.size).toString(),
                 )
             }
-            if (makerWorld != null) {
-                FilaTabla(
-                    Web.MAKERWORLD.nombre,
-                    makerWorld.subidos.toString(),
-                    makerWorld.conError.toString(),
-                    makerWorld.sinSubir.toString(),
-                )
-            }
             if (makerOnline != null || r.sinMakerOnline.isNotEmpty()) {
                 FilaTabla(
                     Web.MAKERONLINE.nombre,
@@ -570,9 +601,6 @@ private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
         if (creality != null && creality.yaSubidos > 0) {
             Text(Textos.yaEstabanEnCreality(creality.yaSubidos), style = pequeno, color = Colores.textoSuave)
         }
-        if (makerWorld != null && makerWorld.yaSubidos > 0) {
-            Text(Textos.yaEstabanEnMakerWorld(makerWorld.yaSubidos), style = pequeno, color = Colores.textoSuave)
-        }
         if (r.sin3mf.isNotEmpty()) Text(Textos.sinCrealityPorStl(r.sin3mf), style = pequeno, color = Colores.ambarTexto)
         if (r.sinMakerOnline.isNotEmpty()) Text(Textos.sinMakerOnline(r.sinMakerOnline), style = pequeno, color = Colores.ambarTexto)
         if (r.aSubidos > 0) Text(Textos.pasanASubidos(r.aSubidos), style = pequeno, color = Colores.textoClaro)
@@ -581,8 +609,6 @@ private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
             if (conError.isNotEmpty()) BotonEnlace(Textos.ABRIR_ERRORES, { abrir(rutas.errores) })
         }
         if ((creality?.conError ?: 0) > 0) Text(Textos.ERRORES_CREALITY_EN_LISTA, style = pequeno, color = Colores.textoSuave)
-        if ((makerWorld?.conError ?: 0) > 0) Text(Textos.ERRORES_MAKERWORLD_EN_LISTA, style = pequeno, color = Colores.textoSuave)
-        if ((makerWorld?.subidos ?: 0) > 0) Text(Textos.ANTES_DE_PUBLICAR_MAKERWORLD, style = pequeno, color = Colores.textoSuave)
         for (carpeta in conError) {
             // La captura si la hay (falló al subir); si no, el error.txt (no era válida)
             val captura = carpeta.resolve("error.png")

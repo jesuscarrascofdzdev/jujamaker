@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Diagnóstico de MakerWorld" type="Application" factoryName="Application" folderName="MakerWorld">
-    <option name="MAIN_CLASS_NAME" value="dev.jefe.makeronline.DiagnosticoMakerWorld" />
+  <configuration default="false" name="Cola de MakerWorld (para la extensión)" type="Application" factoryName="Application" folderName="MakerWorld">
+    <option name="MAIN_CLASS_NAME" value="dev.jefe.makeronline.ServidorMakerWorld" />
     <module name="makeronline-desktop.core.main" />
     <option name="PROGRAM_PARAMETERS" value="" />
     <option name="VM_PARAMETERS" value="-Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8" />
