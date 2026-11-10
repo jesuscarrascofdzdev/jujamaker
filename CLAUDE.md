@@ -6,7 +6,7 @@ y descargar modelos de MakerOnline. App no oficial.
 
 - **MakerOnline** y **Creality Cloud**: hechas (autor original del repo).
 - **MakerWorld** (Bambu Lab): apartado en la rama `makerworld` (PR en borrador). No sube la app (Cloudflare): sube la persona con la extensión de Chrome `extension-makerworld`. Se dejó porque MakerWorld pide fotos de impresiones reales. Ver `docs/contexto-makerworld.md` en esa rama.
-- **Printables** (Prusa): en curso en la rama `printables`. Cloudflare no deja entrar al Chrome de la app (comprobado con `DiagnosticoPrintables`): sube la persona con la extensión de Chrome `extension-printables`, que rellena el formulario con la cola de la app. Ver `docs/contexto-printables.md`.
+- **Printables** (Prusa): en curso en la rama `printables`. Cloudflare no deja entrar al Chrome de la app (comprobado con `DiagnosticoPrintables`): sube la persona con la extensión de Chrome `extension-printables`, que rellena el formulario con la cola de la app. Ver `docs/contexto-printables.md`. Resumen de lo que trae la rama para quien la fusione: `docs/cambios-printables.md`.
 
 ## Estructura
 - `core/`: lógica sin interfaz. Java heredado (`src/main/java`: Uploader, Downloader, ModelFolder, AgentLock…)
