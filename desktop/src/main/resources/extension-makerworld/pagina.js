@@ -35,8 +35,27 @@
     throw new Error('no llega: ' + que);
   }
 
-  const botonExacto = (texto) =>
-    [...document.querySelectorAll('main button')].find((b) => limpio(b.innerText) === texto);
+  /**
+   * Los botones se buscan por su forma y no por el texto, para que valga aunque MakerWorld salga en
+   * otro idioma. El botón relleno (MuiButton-contained) que va el último es "Next Step" en el paso 1 y
+   * "Publish" en el borrador (comprobado el 10/11/2026), así que solo se usa estando en /publish.
+   */
+  function botonSiguiente() {
+    if (!/\/my\/models\/publish/.test(location.pathname)) return null;
+    const rellenos = [...document.querySelectorAll('main button.MuiButton-contained')];
+    return rellenos[rellenos.length - 1] || null;
+  }
+
+  /** "Save to draft": el botón que va justo antes de "Publish", en la misma fila (10/11/2026). */
+  function botonGuardar() {
+    const rellenos = [...document.querySelectorAll('main button.MuiButton-contained')];
+    const publicar = rellenos[rellenos.length - 1];
+    const antes = publicar && publicar.previousElementSibling;
+    return antes && antes.tagName === 'BUTTON' ? antes : null;
+  }
+
+  /** ¿React ya ha tomado el control de este elemento? Antes de eso los clics no le llegan. */
+  const conReact = (el) => !!el && Object.keys(el).some((k) => k.startsWith('__reactProps'));
 
   /** Escribe en un campo de React con el "setter" del navegador y avisa a React del cambio. */
   function escribir(input, valor) {
@@ -70,8 +89,10 @@
     if (!input) throw new Error('no encuentro la zona de ' + que);
     const antes = subidasS3();
     ponerArchivos(input, [archivo]);
-    const enviar = await hasta(() => [...document.querySelectorAll('.MuiDialog-root button')]
-      .find((b) => limpio(b.innerText) === 'Submit'), 'la ventana de recorte de ' + que, 15000);
+    // El botón de aceptar ("Submit") se busca por su forma; por el texto solo si no lo encuentra así.
+    const enviar = await hasta(() => document.querySelector('.MuiDialog-root button.MuiButton-contained') ||
+      [...document.querySelectorAll('.MuiDialog-root button')].find((b) => limpio(b.innerText) === 'Submit'),
+    'la ventana de recorte de ' + que, 15000);
     enviar.click();
     await hasta(() => !document.body.contains(enviar), 'que se cierre el recorte de ' + que, 15000);
     await esperarSubidas(antes, 1, 'que se suba ' + que, 120000);
@@ -88,16 +109,11 @@
     }
 
     // --- Paso 1: sin perfil de impresión, todos los archivos como "Raw Model Files"
-    paso('Eligiendo "I have STL/CAD files"');
-    const opcion = await hasta(() => [...document.querySelectorAll('main label')]
-      .find((l) => /STL\/CAD/.test(l.innerText)), 'la opción "I have STL/CAD files"');
-    opcion.click();
-    await hasta(() => document.querySelector('main input[type=radio][value=false]').checked, 'que se marque la opción');
-    const siguiente1 = botonExacto('Next Step');
-    if (siguiente1) siguiente1.click();
+    paso('Eligiendo "No, I have STL/CAD files"');
+    await elegirSinPerfil();
 
     paso('Subiendo ' + modelos.length + ' archivo(s) del modelo');
-    const zona = await hasta(() => document.querySelector('main div.dropzone input[type=file][accept*=".stl"]'),
+    const zona = await hasta(() => document.querySelector('main .js-scroll-modelFiles input[type=file]'),
       'la zona de "Raw Model Files"');
     const antesModelos = subidasS3();
     ponerArchivos(zona, modelos);
@@ -105,7 +121,8 @@
 
     // --- Paso 2: al pulsar "Next Step" MakerWorld crea el borrador y salta a /my/models/drafts/<id>/edit
     paso('Pasando al paso 2 (MakerWorld crea el borrador)');
-    botonExacto('Next Step').click();
+    await elegirSinPerfil(); // por si React ha vuelto a pintar la pregunta mientras se subía
+    (await hasta(() => botonSiguiente(), 'el botón "Next Step"')).click();
     const enBorrador = await hasta(() => location.pathname.match(/\/my\/models\/drafts\/(\d+)\/edit/),
       'el paso 2 (el borrador)', 60000);
     const borrador = enBorrador[1];
@@ -131,7 +148,7 @@
     await hasta(() => titulo.value === ficha.titulo, 'que se quede el nombre');
 
     paso('Categoría: ' + ficha.categoria.grupo + ' > ' + ficha.categoria.nombre);
-    await elegirCategoria(ficha.categoria.nombre);
+    await elegirCategoria(ficha.categoria);
 
     paso('Etiquetas (' + ficha.etiquetas.length + ')');
     const noAnadidas = await escribirEtiquetas(ficha.etiquetas);
@@ -161,23 +178,46 @@
     return texto.split(/\r?\n/).map((l) => (l.trim() ? '<p>' + escapar(l) + '</p>' : '<p>&nbsp;</p>')).join('');
   }
 
-  /** Abre el desplegable de "Category" y pulsa la opción que se llama exactamente así. */
-  async function elegirCategoria(nombre) {
-    const raiz = document.querySelector('main .js-scroll-categoryId .MuiAutocomplete-root');
-    const input = raiz.querySelector('input');
-    input.focus();
-    raiz.querySelector('.MuiAutocomplete-popupIndicator').click();
-    const opcion = await hasta(() => [...document.querySelectorAll('[role=listbox] li')]
-      .find((li) => limpio(li.innerText) === nombre), 'la categoría "' + nombre + '" en el desplegable', 10000);
-    opcion.scrollIntoView({ block: 'center' });
-    opcion.click();
-    await hasta(() => input.value === nombre, 'que se quede la categoría "' + nombre + '"', 5000);
+  /**
+   * Paso 1: "¿Tienes un archivo de Bambu Studio (.3mf)?" → "No, I have STL/CAD files".
+   * Al abrir la página no hay ninguna marcada y sin elegir no deja seguir ("Please select a type.").
+   * Si se pulsa antes de que React se haya hecho con la página, el círculo se marca pero React no se
+   * entera y no salen las zonas de subida; y con "Yes" sale además la zona .js-scroll-model3Mf.
+   * Por eso se busca la opción por su valor (value=false, sin depender del idioma), se espera a React
+   * y se repite hasta que está marcada, sale la zona "Raw Model Files" y no la del 3MF
+   * (comprobado el 10/11/2026).
+   */
+  async function elegirSinPerfil() {
+    const opcionNo = () => document.querySelector('main input[type=radio][value=false]');
+    const lista = () => {
+      const r = opcionNo();
+      return r && r.checked && document.querySelector('main .js-scroll-modelFiles input[type=file]') &&
+        !document.querySelector('main .js-scroll-model3Mf');
+    };
+    await hasta(() => conReact(opcionNo()), 'la pregunta del archivo .3mf (STL/CAD)');
+    for (let i = 0; i < 20 && !lista(); i++) {
+      const r = opcionNo();
+      (r.closest('label') || r).click();
+      await esperar(700);
+    }
+    if (!lista()) throw new Error('no consigo marcar "No, I have STL/CAD files"; márcalo a mano y pulsa "Rellenar este"');
   }
 
-  /** Cuántas etiquetas hay puestas: el título de la sección dice "Tags (n / 50)". */
+  /**
+   * La categoría y la licencia se ponen en el formulario (Formik) por su id/valor, que no cambian
+   * con el idioma; la web las enseña bien después (comprobado el 10/11/2026: categoryId 805 →
+   * "Other Toys & Games", license BY-SA → "Creative Commons Attribution-Share Alike").
+   */
+  async function elegirCategoria(categoria) {
+    const f = await hasta(() => formik(), 'el formulario (Formik)', 10000);
+    await f.setFieldValue('categoryId', categoria.id);
+    await hasta(() => formik().values.categoryId === categoria.id, 'que se quede la categoría "' + categoria.nombre + '"', 5000);
+  }
+
+  /** Cuántas etiquetas hay puestas, según el formulario. */
   const etiquetasPuestas = () => {
-    const m = document.querySelector('main .js-scroll-tags').innerText.match(/Tags\s*\(\s*(\d+)\s*\//);
-    return m ? Number(m[1]) : 0;
+    const f = formik();
+    return f && Array.isArray(f.values.tags) ? f.values.tags.length : 0;
   };
 
   /**
@@ -221,16 +261,14 @@
     return fuera;
   }
 
-  /** Abre el desplegable de licencia (input[name=license]) y pulsa la opción con ese data-value. */
+  /** La licencia, igual que la categoría: por su valor en el formulario (input[name=license]). */
   async function elegirLicencia(valor) {
     const guardada = document.querySelector('main input[name=license]');
     if (guardada.value === valor) return;
-    guardada.parentElement.querySelector('.MuiSelect-select')
-      .dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    const opcion = await hasta(() => document.querySelector('[role=listbox] [role=option][data-value="' + valor + '"]'),
-      'la licencia ' + valor + ' en el desplegable', 10000);
-    opcion.click();
-    await hasta(() => guardada.value === valor, 'que se quede la licencia ' + valor, 5000);
+    const f = await hasta(() => formik(), 'el formulario (Formik)', 10000);
+    await f.setFieldValue('license', valor);
+    await hasta(() => document.querySelector('main input[name=license]').value === valor,
+      'que se quede la licencia ' + valor, 5000);
   }
 
   /**
@@ -252,7 +290,7 @@
     leer().then((d) => { antes = d.updateTime; }).catch(() => {});
     document.addEventListener('click', async (ev) => {
       const b = ev.target.closest && ev.target.closest('button');
-      if (!b || limpio(b.innerText) !== 'Save to draft' || window.__jujamakerVigilando !== borrador) return;
+      if (!b || b !== botonGuardar() || window.__jujamakerVigilando !== borrador) return;
       paso('Comprobando lo que ha guardado MakerWorld…');
       try {
         let d = null;

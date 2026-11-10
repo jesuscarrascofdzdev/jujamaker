@@ -122,6 +122,18 @@ clases `mw-css-…` (cambian con cada versión).
 **Categorías**: en `CatalogoMakerWorld.CATEGORIAS`, con su id (las opciones del autocompletado tienen
 `id, name, slug, parentId, parentName`).
 
+**Lo que hace la extensión sin depender del idioma ni de las prisas** (comprobado el 10/11/2026, borradores de prueba
+10462080 y 10462166, ya borrados):
+- Pregunta del .3mf: al abrir la página no hay ninguna marcada y "Next Step" sin elegir da *"Please select a type."*.
+  Si se pulsa antes de que React se haya hecho con la página (el `input` aún no tiene `__reactProps…`), el círculo se
+  marca pero no salen las zonas. La extensión espera a React, pulsa `input[type=radio][value=false]` y repite hasta
+  que está marcado, existe `.js-scroll-modelFiles input[type=file]` y **no** existe `.js-scroll-model3Mf` (la zona
+  del .3mf, que solo sale con "Yes"). No pulsa "Next Step" antes de subir los archivos.
+- Botones por su forma: el último `main button.MuiButton-contained` es "Next Step" en `/publish` y "Publish" en el
+  borrador; "Save to draft" es el botón justo antes de "Publish"; en el recorte, el contained del `.MuiDialog-root`.
+- Categoría y licencia con `setFieldValue('categoryId', id)` y `setFieldValue('license', valor)` del formulario
+  (Formik): la web las pinta bien ("Other Toys & Games", "Creative Commons Attribution-Share Alike") y se guardan.
+
 ## Lo que dice la documentación de Bambu Lab (leído el 10/11/2026)
 
 Fuentes: wiki de Bambu Lab ([cómo subir modelos](https://wiki.bambulab.com/en/makerworld/tutorials/how-to-upload-models),
