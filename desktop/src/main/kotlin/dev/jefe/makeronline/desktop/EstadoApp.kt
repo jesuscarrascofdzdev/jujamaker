@@ -28,6 +28,8 @@ class EstadoApp(val rutas: Rutas) {
     val descarga = EstadoDescarga(rutas, hilo, ocupacion, ajustes)
     /** La ventana de añadir y quitar usuarios (botón "Editar" de Descargar). */
     val edicion = EstadoEdicion(rutas, hilo, ocupacion, descarga)
+    /** La cola de Printables para la extensión de Chrome (pantalla Subir). Arranca su servidor ya. */
+    val printables = EstadoPrintables(rutas).also { it.arrancar() }
     /** La tarjeta "Conectar con Claude" (pantalla Sesión). */
     val claude = EstadoClaude()
     /** Traer los datos de antes (pantalla Sesión). Después, todo se vuelve a leer. */
@@ -47,6 +49,7 @@ class EstadoApp(val rutas: Rutas) {
         subida.alCerrarApp()
         descarga.alCerrarApp()
         sesion.alCerrarApp()
+        printables.cerrar()
         hilo.close()
     }
 

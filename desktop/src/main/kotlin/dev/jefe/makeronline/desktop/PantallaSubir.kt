@@ -56,10 +56,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.jefe.makeronline.ColaPrintables
 import dev.jefe.makeronline.Rutas
 import dev.jefe.makeronline.Web
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.RenderingHints
@@ -80,7 +82,13 @@ import javax.imageio.ImageIO
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope, irASesion: () -> Unit) {
+fun PantallaSubir(
+    s: EstadoSubida,
+    rutas: Rutas,
+    alcance: CoroutineScope,
+    irASesion: () -> Unit,
+    printables: EstadoPrintables,
+) {
     // Cada vez que se abre la pantalla se vuelve a mirar pendientes/ (por si has cambiado algo)
     LaunchedEffect(Unit) {
         if (!s.enMarcha) s.cargar()
@@ -159,6 +167,8 @@ fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope, irASes
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     PanelRevision(s)
+                    // Arriba, para que se vea sin tener que bajar: Printables va aparte (con la extensión)
+                    PanelPrintables(printables)
                     PanelSubirAhora(s, alcance, irASesion)
                     PanelProgresoSubida(s)
                     PanelResumenSubida(s, rutas)
@@ -510,6 +520,37 @@ private fun PanelRevision(s: EstadoSubida) {
             BotonPrincipal(enviar, { s.guardarBorrador() })
             BotonSecundario(Textos.DESCARTAR, { s.descartar() })
         }
+    }
+}
+
+/**
+ * Printables: se sube a mano en el Chrome de siempre con la extensión de JujaMaker, que rellena el
+ * formulario con los modelos de la cola (ver EstadoPrintables). Aquí se ve cuántos faltan.
+ */
+@Composable
+private fun PanelPrintables(pr: EstadoPrintables) {
+    // Mientras se ve la tarjeta, la cuenta se refresca sola (la extensión va apuntando lo que se sube)
+    LaunchedEffect(Unit) {
+        while (true) {
+            pr.actualizar()
+            delay(5_000)
+        }
+    }
+    Tarjeta(espacio = 10.dp) {
+        Text(Textos.PR_TITULO, style = MaterialTheme.typography.titleMedium)
+        Text(Textos.PR_EXPLICACION, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+        val error = pr.error
+        if (error != null) {
+            Text(error, color = MaterialTheme.colorScheme.error)
+        } else {
+            Text(Textos.prCuenta(pr.porSubir, pr.conProblemas, pr.subidas), style = MaterialTheme.typography.bodyMedium)
+        }
+        pr.ultima?.let { Text("✓ " + Textos.prUltima(it), style = MaterialTheme.typography.bodySmall, color = Colores.verdeTexto) }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BotonPrincipal(Textos.PR_ABRIR, { abrirEnNavegador(ColaPrintables.FORMULARIO_SEGUIDO) }, enabled = pr.porSubir > 0)
+            BotonEnlace(Textos.PR_CARPETA_EXTENSION, { abrir(pr.carpetaExtension) })
+        }
+        Text(Textos.PR_INSTALAR, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
     }
 }
 

@@ -12,6 +12,9 @@ import kotlin.system.exitProcess
 /**
  * Diagnóstico de Printables, antes de hacer su subidor.
  *
+ * Resultado del 10/11/2026: **no deja** (casi 4 minutos en "Just a moment..." en bucle), así que Printables
+ * se sube con la extensión (ver ColaPrintables). Se deja por si un día cambia.
+ *
  * Lo primero que mira es si Printables deja entrar al Chrome que maneja la app. MakerWorld no lo
  * deja (Cloudflare se queda en bucle, comprobado el 10/11/2026) y Printables tiene una verificación
  * aún más dura: el 10/11/2026 ni el navegador de Claude pasaba de "Verificación de seguridad en
@@ -98,7 +101,13 @@ object DiagnosticoPrintables {
         val primera = runCatching { page.navigate(WEB) }.getOrNull()
         informe.append("Primera respuesta de $WEB: HTTP ${primera?.status() ?: "?"}\n")
         val inicio = System.currentTimeMillis()
-        val dentro = esperar(page, red, cancelacion, null, ESPERA_CLOUDFLARE_MS) { !enVerificacion(page) }
+        // Fuera de la verificación varias veces seguidas: mientras Cloudflare recarga, hay momentos en los
+        // que la página no tiene título ni casilla y parecería que ya ha pasado (pasó el 10/11/2026).
+        var fuera = 0
+        val dentro = esperar(page, red, cancelacion, null, ESPERA_CLOUDFLARE_MS) {
+            fuera = if (enVerificacion(page)) 0 else fuera + 1
+            fuera >= 5
+        }
         val segundos = (System.currentTimeMillis() - inicio) / 1000
         informe.append("Título de la página: \"${page.title()}\" · dirección: ${sinConsulta(page.url())}\n")
         if (!dentro) {
@@ -151,7 +160,7 @@ object DiagnosticoPrintables {
      */
     private fun enVerificacion(page: Page): Boolean {
         val titulo = runCatching { page.title() }.getOrDefault("")
-        if (titulo.startsWith("Just a moment") || titulo.startsWith("Un momento")) return true
+        if (titulo.isBlank() || titulo.startsWith("Just a moment") || titulo.startsWith("Un momento")) return true
         return runCatching {
             page.evaluate("() => !!document.querySelector('iframe[src*=\"challenges.cloudflare.com\"], #challenge-form, #cf-chl-widget')") as Boolean
         }.getOrDefault(true)
