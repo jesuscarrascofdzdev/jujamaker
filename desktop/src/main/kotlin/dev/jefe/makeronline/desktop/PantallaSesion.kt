@@ -1,6 +1,7 @@
 package dev.jefe.makeronline.desktop
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -26,12 +28,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import dev.jefe.makeronline.Web
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Pantalla Sesión: Chrome y MakerOnline arriba, Claude y la carpeta de datos debajo. Si hay datos
- * de antes que traer, una tarjeta encima de todo.
+ * Pantalla Sesión: arriba, una tarjeta con las webs donde se sube (una fila cada una, con su sesión
+ * y su botón); debajo, Chrome, la carpeta de datos y Claude. Si hay datos de antes que traer, una
+ * tarjeta encima de todo.
  */
 @Composable
 fun PantallaSesion(s: EstadoSesion, d: EstadoDatos, c: EstadoClaude, alcance: CoroutineScope) {
@@ -66,90 +70,159 @@ fun PantallaSesion(s: EstadoSesion, d: EstadoDatos, c: EstadoClaude, alcance: Co
         for (aviso in d.avisos) Text("⚠ $aviso", color = Colores.ambarTexto)
         d.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
-        // --- Chrome y MakerOnline ---
+        // --- Las webs donde se sube ---
+        TarjetaWebs(s, alcance)
+
+        // --- Chrome, carpeta de datos y Claude ---
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             TarjetaChrome(s, Modifier.weight(1f).fillMaxHeight())
-            TarjetaMakerOnline(s, alcance, Modifier.weight(2f).fillMaxHeight())
-        }
-
-        // --- Claude y carpeta de datos ---
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            TarjetaDatos(d, alcance, Modifier.weight(1.4f).fillMaxHeight())
             TarjetaClaude(c, Modifier.weight(2f).fillMaxHeight())
-            TarjetaDatos(d, alcance, Modifier.weight(1f).fillMaxHeight())
         }
     }
 }
 
-/** El cuadrado con el icono a la izquierda de cada tarjeta. */
+/**
+ * Las webs donde se sube, una fila cada una (ver [FilaWeb]). Arriba, cuándo se comprobó la sesión
+ * y el botón para comprobarlas todas otra vez. Una web nueva sale aquí sola: basta con añadirla a
+ * Web (core) y darle su icono (Iconos.de) y sus textos (Textos.comoSube e instruccionesLogin).
+ */
+@Composable
+private fun TarjetaWebs(s: EstadoSesion, alcance: CoroutineScope) {
+    val forma = RoundedCornerShape(12.dp)
+    val comprobando = s.ocupado && s.webEsperando == null
+    Column(Modifier.fillMaxWidth().clip(forma).background(Colores.tarjeta).border(1.dp, Colores.borde, forma)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(Textos.WEBS_TITULO, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            val cuando = if (comprobando) Textos.COMPROBANDO else s.comprobadaA?.let { Textos.comprobadoA(it) }
+            cuando?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave) }
+            BotonSecundario(Textos.COMPROBAR, { alcance.launch { s.comprobar() } }, enabled = s.libre)
+        }
+        if (comprobando) LinearProgressIndicator(Modifier.fillMaxWidth())
+        // Los errores que no son de una web concreta (por ejemplo, otro programa está usando Chrome)
+        if (s.errorDe == null) {
+            s.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+            }
+        }
+        for (web in Web.entries) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Colores.bordeSuave))
+            FilaWeb(s, web, alcance)
+        }
+    }
+}
+
+/**
+ * Una web: su icono, cómo sube, si hay sesión y el botón para iniciarla. Mientras Chrome está abierto
+ * para iniciar sesión en ella, debajo salen las instrucciones con "Ya he entrado" y "Cancelar".
+ */
+@Composable
+private fun FilaWeb(s: EstadoSesion, web: Web, alcance: CoroutineScope) {
+    val e = s.estado
+    val iniciada = s.iniciada(web)
+    val esperando = s.esperandoLogin && s.webEsperando == web
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            IconoTarjeta(Iconos.de(web))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(web.nombre, style = MaterialTheme.typography.titleMedium)
+                Text(Textos.comoSube(web), style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+                // Por qué no hay sesión (MakerOnline lo dice) o, en Creality, que se comprueba al subir
+                val nota = when {
+                    e == null -> null
+                    web == Web.MAKERONLINE && !iniciada -> e.motivo?.replaceFirstChar { it.uppercase() }
+                    web == Web.CREALITY && iniciada -> Textos.CREALITY_NOTA
+                    else -> null
+                }
+                nota?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave) }
+            }
+            when {
+                e == null -> Etiqueta(
+                    if (s.ocupado) Textos.COMPROBANDO else Textos.SIN_COMPROBAR,
+                    Colores.tarjetaAlta, Colores.textoSuave, punto = Colores.textoApagado,
+                )
+                iniciada -> Etiqueta(
+                    Textos.sesionIniciadaCorta(s.cuenta(web)),
+                    Colores.verdeFondo, Colores.verdeTexto, punto = Colores.verde,
+                )
+                else -> Etiqueta(Textos.SIN_SESION, Colores.rojoFondo, Colores.rojoTexto, punto = Colores.rojo)
+            }
+            // Todos los botones con el mismo ancho, para que queden en columna
+            Box(Modifier.width(200.dp), contentAlignment = Alignment.CenterEnd) {
+                if (iniciada) {
+                    BotonEnlace(Textos.VOLVER_A_INICIAR, { alcance.launch { s.abrirParaIniciar(web) } }, enabled = s.libre)
+                } else {
+                    BotonPrincipal(
+                        Textos.INICIAR_SESION,
+                        { alcance.launch { s.abrirParaIniciar(web) } },
+                        enabled = s.libre && e?.chromeInstalado != false,
+                    )
+                }
+            }
+        }
+        // Chrome abierto para iniciar sesión en esta web: qué hacer y los botones para seguir
+        if (esperando) {
+            val forma = RoundedCornerShape(10.dp)
+            Column(
+                Modifier.padding(start = 56.dp).fillMaxWidth()
+                    .clip(forma)
+                    .background(Colores.acentoFondo)
+                    .border(1.dp, Colores.seleccionBorde, forma)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(Textos.instruccionesLogin(web), style = MaterialTheme.typography.bodyMedium, color = Colores.textoClaro)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BotonPrincipal(Textos.YA_HE_ENTRADO, { alcance.launch { s.yaHeEntrado() } }, enabled = !s.ocupado)
+                    BotonSecundario(Textos.CANCELAR, { alcance.launch { s.cancelarInicio() } }, enabled = !s.ocupado)
+                }
+            }
+        }
+        if (s.ocupado && s.webEsperando == web) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (s.errorDe == web) s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+    }
+}
+
+/** El cuadrado con el icono de cada web. */
 @Composable
 private fun IconoTarjeta(icono: ImageVector) {
     Box(
-        Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(Colores.tarjetaAlta),
+        Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(Colores.tarjetaAlta),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icono, contentDescription = null, tint = Colores.textoClaro, modifier = Modifier.size(22.dp))
     }
 }
 
+/** El título de las tarjetas pequeñas: icono y nombre. */
 @Composable
-private fun TarjetaChrome(s: EstadoSesion, modifier: Modifier) {
-    val e = s.estado
-    Tarjeta(modifier, relleno = 20.dp) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            IconoTarjeta(Iconos.globo)
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(Textos.CHROME, style = MaterialTheme.typography.titleMedium)
-                when {
-                    e == null -> Text(if (s.ocupado) Textos.COMPROBANDO else Textos.SIN_COMPROBAR, color = Colores.textoSuave)
-                    e.chromeInstalado -> Text("✓ " + Textos.CHROME_OK, color = Colores.verdeTexto)
-                    else -> {
-                        Text("✘ " + Textos.CHROME_FALTA, color = Colores.rojoTexto)
-                        BotonEnlace(Textos.DESCARGAR_CHROME, { abrirEnNavegador(Textos.URL_CHROME) })
-                    }
-                }
-            }
-        }
+private fun TituloTarjeta(icono: ImageVector, titulo: String, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(icono, contentDescription = null, tint = Colores.textoClaro, modifier = Modifier.size(22.dp))
+        Text(titulo, style = MaterialTheme.typography.titleMedium)
     }
 }
 
 @Composable
-private fun TarjetaMakerOnline(s: EstadoSesion, alcance: CoroutineScope, modifier: Modifier) {
+private fun TarjetaChrome(s: EstadoSesion, modifier: Modifier) {
     val e = s.estado
-    Tarjeta(modifier, relleno = 20.dp, espacio = 14.dp) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
-            IconoTarjeta(Iconos.cubo)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(Textos.MAKERONLINE, style = MaterialTheme.typography.titleMedium)
-                when {
-                    e == null -> Text(if (s.ocupado) Textos.COMPROBANDO else Textos.SIN_COMPROBAR, color = Colores.textoSuave)
-                    e.iniciada -> Text(
-                        "✓ " + (e.nombre?.let { Textos.sesionIniciadaComo(it) } ?: Textos.SESION_INICIADA),
-                        color = Colores.verdeTexto,
-                    )
-                    else -> Text("✘ " + Textos.sinSesion(e.motivo), color = Colores.rojoTexto)
-                }
-            }
-            if (!s.esperandoLogin) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    BotonPrincipal(
-                        if (e?.iniciada == true) Textos.VOLVER_A_INICIAR else Textos.INICIAR_SESION,
-                        { alcance.launch { s.abrirParaIniciar() } },
-                        enabled = s.libre && e?.chromeInstalado != false,
-                    )
-                    BotonSecundario(Textos.COMPROBAR, { alcance.launch { s.comprobar() } }, enabled = s.libre)
-                }
+    Tarjeta(modifier, relleno = 20.dp, espacio = 12.dp) {
+        TituloTarjeta(Iconos.globo, Textos.CHROME)
+        when {
+            e == null -> Text(if (s.ocupado) Textos.COMPROBANDO else Textos.SIN_COMPROBAR, color = Colores.textoSuave)
+            e.chromeInstalado -> Text("✓ " + Textos.CHROME_OK, color = Colores.verdeTexto)
+            else -> {
+                Text("✘ " + Textos.CHROME_FALTA, color = Colores.rojoTexto)
+                BotonEnlace(Textos.DESCARGAR_CHROME, { abrirEnNavegador(Textos.URL_CHROME) })
             }
         }
-        // Chrome abierto para iniciar sesión: qué hacer y los botones para seguir
-        if (s.esperandoLogin) {
-            Text(Textos.INSTRUCCIONES_LOGIN, style = MaterialTheme.typography.bodyMedium, color = Colores.textoClaro)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                BotonPrincipal(Textos.YA_HE_ENTRADO, { alcance.launch { s.yaHeEntrado() } }, enabled = !s.ocupado)
-                BotonSecundario(Textos.CANCELAR, { alcance.launch { s.cancelarInicio() } }, enabled = !s.ocupado)
-            }
-        }
-        if (s.ocupado) LinearProgressIndicator(Modifier.fillMaxWidth())
-        s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }
 
@@ -158,8 +231,7 @@ private fun TarjetaMakerOnline(s: EstadoSesion, alcance: CoroutineScope, modifie
 private fun TarjetaClaude(c: EstadoClaude, modifier: Modifier) {
     Tarjeta(modifier, relleno = 20.dp, espacio = 12.dp) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Iconos.enlace, contentDescription = null, tint = Colores.textoClaro, modifier = Modifier.size(22.dp))
-            Text(Textos.CLAUDE_TITULO, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TituloTarjeta(Iconos.enlace, Textos.CLAUDE_TITULO, Modifier.weight(1f))
             if (c.estado == ConectorClaude.Estado.CONECTADO) {
                 Etiqueta("✓ " + Textos.CLAUDE_ETIQUETA_CONECTADO, Colores.verdeFondo, Colores.verdeTexto)
             }
@@ -182,8 +254,9 @@ private fun TarjetaClaude(c: EstadoClaude, modifier: Modifier) {
             if (c.estado == ConectorClaude.Estado.CONECTADO || c.estado == ConectorClaude.Estado.OTRA_RUTA) {
                 BotonEnlace(Textos.CLAUDE_QUITAR, { c.quitar() })
             }
-            BotonEnlace(Textos.CLAUDE_COPIAR_COMANDO, { c.copiarComando() }, enabled = c.exe != null)
         }
+        // En su propia línea: la tarjeta es estrecha y no cabe al lado de los otros botones
+        BotonEnlace(Textos.CLAUDE_COPIAR_COMANDO, { c.copiarComando() }, enabled = c.exe != null)
         c.aviso?.let { Text(it, color = Colores.verde) }
         c.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Text(c.archivo.toString(), fontFamily = LETRA_MONO, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
@@ -194,10 +267,7 @@ private fun TarjetaClaude(c: EstadoClaude, modifier: Modifier) {
 @Composable
 private fun TarjetaDatos(d: EstadoDatos, alcance: CoroutineScope, modifier: Modifier) {
     Tarjeta(modifier, relleno = 20.dp, espacio = 12.dp) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Iconos.carpeta, contentDescription = null, tint = Colores.textoClaro, modifier = Modifier.size(22.dp))
-            Text(Textos.CARPETA_DATOS_TITULO, style = MaterialTheme.typography.titleMedium)
-        }
+        TituloTarjeta(Iconos.carpeta, Textos.CARPETA_DATOS_TITULO)
         Text(d.carpeta.toString(), fontFamily = LETRA_MONO, style = MaterialTheme.typography.bodySmall, color = Colores.textoClaro)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BotonSecundario(Textos.ABRIR_CARPETA_DATOS, { abrir(d.carpeta) })

@@ -24,7 +24,7 @@ class EstadoApp(val rutas: Rutas) {
     val sesion = EstadoSesion(rutas, hilo, ocupacion)
     /** Lo que se recuerda de una vez para otra (ajustes.properties). */
     val ajustes = Ajustes(rutas.ajustes)
-    val subida = EstadoSubida(rutas, hilo, ocupacion, ajustes)
+    val subida = EstadoSubida(rutas, hilo, ocupacion, ajustes, sesion)
     val descarga = EstadoDescarga(rutas, hilo, ocupacion, ajustes)
     /** La ventana de añadir y quitar usuarios (botón "Editar" de Descargar). */
     val edicion = EstadoEdicion(rutas, hilo, ocupacion, descarga)

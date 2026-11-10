@@ -8,10 +8,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * La sesión de MakerOnline guardada en el perfil de Chrome (chrome-profile/).
+ * Las sesiones de MakerOnline y de Creality Cloud guardadas en el perfil de Chrome (chrome-profile/).
  *
- * - [comprobar] mira si Chrome está instalado y si la sesión guardada sirve.
- * - [abrirParaIniciar] abre Chrome en MakerOnline para que la persona inicie sesión con Google.
+ * - [comprobar] mira si Chrome está instalado, si la sesión de MakerOnline sirve y si hay sesión de
+ *   Creality Cloud guardada.
+ * - [abrirParaIniciar] abre Chrome en una de las webs para que la persona inicie sesión.
  * - [buscarUsuario] busca en MakerOnline a alguien para añadirlo a la lista de usuarios.
  *
  * Todo lo que usa Chrome coge el candado (ver AgentLock), así que no choca con los
@@ -27,12 +28,15 @@ class Sesion(private val rutas: Rutas) {
      * @property iniciada        si hay sesión de MakerOnline y MakerOnline la acepta
      * @property nombre          el nombre visible de la cuenta, si hay sesión
      * @property motivo          por qué no hay sesión, para enseñárselo a la persona
+     * @property creality        si hay sesión de Creality Cloud guardada en Chrome (su cookie; se
+     *                           comprueba de verdad al subir, en la propia página)
      */
     data class Estado(
         val chromeInstalado: Boolean,
         val iniciada: Boolean,
         val nombre: String? = null,
         val motivo: String? = null,
+        val creality: Boolean = false,
     )
 
     /**
@@ -61,8 +65,9 @@ class Sesion(private val rutas: Rutas) {
     }
 
     /**
-     * Comprueba Chrome y la sesión. Abre Chrome sin ventana unos segundos para leer la sesión
-     * del perfil y preguntar a MakerOnline si sigue valiendo.
+     * Comprueba Chrome y las sesiones. Abre Chrome sin ventana unos segundos para leer las cookies
+     * del perfil y preguntar a MakerOnline si su sesión sigue valiendo. De Creality solo se mira si
+     * está su cookie (no se abre su web): si hubiera caducado, se avisa al subir.
      *
      * @throws AgenteException si otro programa está usando Chrome (candado ocupado)
      */
@@ -74,8 +79,10 @@ class Sesion(private val rutas: Rutas) {
         AgentLock.acquire(rutas.candado, "JujaMaker (comprobando la sesión)", false, progreso).use {
             Browsers.playwright().use { pw ->
                 Browsers.openChrome(pw, rutas.perfilChrome, 0.0, true, false).use { ctx ->
+                    val creality = tokenCreality(ctx) != null
                     val token = token(ctx)
-                        ?: return Estado(chromeInstalado = true, iniciada = false, motivo = "no hay sesión iniciada")
+                        ?: return Estado(chromeInstalado = true, iniciada = false, motivo = "no hay sesión iniciada",
+                            creality = creality)
                     // Mismo endpoint que usa la web al cargar tu perfil (comprobado el 31/10/2026)
                     val r = ctx.request().get(
                         "$WEB/api/user/personal/info",
@@ -83,27 +90,27 @@ class Sesion(private val rutas: Rutas) {
                             .setHeader("Authorization", token)
                             .setHeader("Accept", "application/json"),
                     )
-                    return interpretar(r.status(), r.text())
+                    return interpretar(r.status(), r.text()).copy(creality = creality)
                 }
             }
         }
     }
 
     /**
-     * Abre Chrome con ventana en MakerOnline para que la persona inicie sesión con Google.
+     * Abre Chrome con ventana en [web] para que la persona inicie sesión.
      * Devuelve la ventana abierta: hay que cerrarla cuando diga que ya ha entrado y luego
      * llamar a [comprobar].
      *
      * @throws AgenteException si otro programa está usando Chrome (candado ocupado)
      */
-    fun abrirParaIniciar(progreso: Progreso): Abierta {
+    fun abrirParaIniciar(progreso: Progreso, web: Web = Web.MAKERONLINE): Abierta {
         val candado = AgentLock.acquire(rutas.candado, "JujaMaker (iniciando sesión)", false, progreso)
         var pw: Playwright? = null
         try {
             pw = Browsers.playwright()
             val ctx = Browsers.openChrome(pw, rutas.perfilChrome, 0.0)
             val page = if (ctx.pages().isEmpty()) ctx.newPage() else ctx.pages()[0]
-            page.navigate("$WEB/en/")
+            page.navigate(web.inicio)
             page.bringToFront()
             return Abierta(candado, pw, ctx)
         } catch (e: Exception) {
@@ -150,9 +157,19 @@ class Sesion(private val rutas: Rutas) {
         private val JSON = ObjectMapper()
         private const val SIN_SESION = "No hay sesión iniciada en MakerOnline. Iníciala en la pantalla Sesión."
 
+        /**
+         * La cookie de la sesión de Creality Cloud: `model_token` (junto a `model_user_id`; comprobado
+         * en el código de su web el 09/11/2026, ver el documento de contexto de Creality).
+         */
+        private const val COOKIE_CREALITY = "model_token"
+
         /** El valor de la cookie de la sesión, o null si no hay. */
         private fun token(ctx: BrowserContext): String? =
             ctx.cookies(WEB).firstOrNull { it.name == COOKIE && !it.value.isNullOrBlank() }?.value
+
+        /** El valor de la cookie de la sesión de Creality Cloud, o null si no hay (o ha caducado). */
+        private fun tokenCreality(ctx: BrowserContext): String? =
+            ctx.cookies(Web.CREALITY.inicio).firstOrNull { it.name == COOKIE_CREALITY && !it.value.isNullOrBlank() }?.value
 
         /** Lee la respuesta de api/user/personal/info: code 0 = sesión válida. */
         @JvmStatic

@@ -53,7 +53,19 @@ class SubidorCreality(
     private val revision: Revision,
 ) {
 
-    data class Opciones(val revisar: Boolean, val carpetas: List<String>, val esperar: Boolean)
+    /**
+     * @property revisar   se para antes de enviar cada modelo para que lo mires
+     * @property carpetas  solo estas carpetas de pendientes/; vacía = todas
+     * @property esperar   si otro programa del agente está en marcha, espera a que termine
+     * @property verChrome true = Chrome a la vista todo el rato (en la terminal, siempre); false = fuera
+     *                     de la pantalla, y aparece solo para revisar cada modelo (como el Uploader)
+     */
+    data class Opciones(
+        val revisar: Boolean,
+        val carpetas: List<String>,
+        val esperar: Boolean,
+        val verChrome: Boolean = true,
+    )
 
     /**
      * @property subidos     enviados bien (cada uno con su subido-creality.txt)
@@ -66,6 +78,9 @@ class SubidorCreality(
 
     /** La persona ha decidido no enviar este modelo al revisarlo. */
     private class Descartado : RuntimeException("descartado al revisar")
+
+    /** No hay sesión de Creality en Chrome (o ha caducado): no se sigue con ningún modelo más. */
+    private class SinSesion : RuntimeException("no hay sesión de Creality Cloud")
 
     /** Algo ha fallado en un paso concreto del formulario: el mensaje dice cuál. */
     class ErrorEnPaso(val paso: String, val motivo: String, causa: Throwable?) :
@@ -120,8 +135,12 @@ class SubidorCreality(
         var ok = 0
         var ko = 0
         var parado = false
+        if (!op.verChrome) {
+            progreso.paso("Chrome se abre fuera de la pantalla" + (if (op.revisar) "; aparecerá para que revises cada modelo" else ""))
+        }
+        val modo = if (op.verChrome) Downloader.Modo.VISIBLE else Downloader.Modo.APARTADA
         Browsers.playwright().use { pw ->
-            Browsers.openChrome(pw, rutas.perfilChrome, 150.0).use { ctx ->
+            Browsers.openChrome(pw, rutas.perfilChrome, 150.0, false, !op.verChrome).use { ctx ->
                 ctx.setDefaultTimeout(30_000.0)
                 for ((i, m) in listos.withIndex()) {
                     if (cancelacion.pedida()) {
@@ -131,8 +150,10 @@ class SubidorCreality(
                     }
                     progreso.modelo(i + 1, listos.size, m.name())
                     val page = ctx.newPage()
+                    // Fuera de la pantalla, cada pestaña nueva se aparta también (como en el Uploader)
+                    val ventana = Downloader.Ventana(modo, ctx, page, progreso)
                     try {
-                        val id = subir(page, m, op.revisar)
+                        val id = subir(page, m, op.revisar, ventana)
                         anotarSubido(m.dir(), id)
                         captura(page, m.dir().resolve(CAPTURA_OK))
                         borrarErroresAnteriores(m.dir())
@@ -145,6 +166,12 @@ class SubidorCreality(
                     } catch (_: Descartado) {
                         sinSubir++
                         progreso.saltado("No se envía ${m.name()} a Creality.")
+                    } catch (_: SinSesion) {
+                        // No es culpa de la carpeta: no se apunta error en ella y se para todo
+                        throw AgenteException(
+                            "No hay sesión de Creality Cloud en Chrome (o ha caducado). Vuelve a iniciarla en la " +
+                                "pantalla Sesión. " + (if (ok > 0) "Antes se han subido bien $ok." else "No se ha subido nada a Creality.")
+                        )
                     } catch (e: Exception) {
                         val mensaje = e.message?.lineSequence()?.firstOrNull() ?: e.toString()
                         progreso.error("Error al subir ${m.name()} a Creality en $mensaje")
@@ -177,6 +204,8 @@ class SubidorCreality(
             throw e
         } catch (e: Descartado) {
             throw e
+        } catch (e: SinSesion) {
+            throw e
         } catch (e: ErrorEnPaso) {
             throw e
         } catch (e: Exception) {
@@ -187,10 +216,11 @@ class SubidorCreality(
     /**
      * Rellena el formulario de Creality con un modelo y lo envía como privado.
      *
+     * @param ventana la ventana de Chrome, para traerla a la vista al revisar si está apartada (o null)
      * @return el id del modelo en Creality
      * @throws CanceladoException si se pide parar antes de enviar (no se envía nada)
      */
-    fun subir(page: Page, m: ModelFolder, revisar: Boolean): String {
+    private fun subir(page: Page, m: ModelFolder, revisar: Boolean, ventana: Downloader.Ventana?): String {
         val meta = m.meta()
         val temporal = Files.createTempDirectory("jujamaker-creality")
         val red = Red()
@@ -202,12 +232,10 @@ class SubidorCreality(
                 try {
                     zona3mf.waitFor(Locator.WaitForOptions().setTimeout(20_000.0))
                 } catch (e: TimeoutError) {
-                    throw IllegalStateException(
-                        if (!haySesion(page)) "no hay sesión de Creality Cloud: inicia sesión primero"
-                        else "no se ha cargado el formulario de subida"
-                    )
+                    if (haySesion(page) == false) throw SinSesion()
+                    throw IllegalStateException("no se ha cargado el formulario de subida")
                 }
-                if (!haySesion(page)) throw IllegalStateException("no hay sesión de Creality Cloud: inicia sesión primero")
+                if (haySesion(page) == false) throw SinSesion()
                 rechazarCookies(page)
             }
 
@@ -289,7 +317,16 @@ class SubidorCreality(
                 if (problemas.isNotEmpty()) throw IllegalStateException(problemas.joinToString("; "))
             }
 
-            if (revisar && !revision.confirmar(m.name())) throw Descartado()
+            if (revisar) {
+                // Si Chrome está fuera de la pantalla, se trae para que mires el formulario y luego se vuelve a apartar
+                ventana?.mostrar()
+                val enviar = try {
+                    revision.confirmar(m.name())
+                } finally {
+                    ventana?.apartar()
+                }
+                if (!enviar) throw Descartado()
+            }
             cancelacion.comprobar() // último punto seguro
             return paso("Enviar (privado)") { enviar(page, red) }
         } finally {
@@ -559,19 +596,59 @@ class SubidorCreality(
         }
     }
 
-    /** Escribe la descripción en su editor (TinyMCE, en la sección `.model-detail-content`), borrando lo que hubiera. */
+    /**
+     * Escribe la descripción en su editor (TinyMCE, en la sección `.model-detail-content`), sustituyendo
+     * lo que hubiera. Se mete de golpe con el propio editor, un párrafo por línea: tecleando línea a
+     * línea, el editor convierte las que empiezan por "- " en una lista (pasó el 09/11/2026: la
+     * primera perdía el guion y las demás quedaban dentro de la lista con él).
+     * Después se pulsa una tecla en el editor para que la web se entere del cambio. Si el editor no
+     * deja hacerlo así, se escribe tecleando.
+     */
     private fun escribirDescripcion(page: Page, texto: String) {
+        val html = texto.split(Regex("\\R")).joinToString("") { linea ->
+            if (linea.isBlank()) "<p>&nbsp;</p>" else "<p>" + escaparHtml(linea) + "</p>"
+        }
+        val puesto = try {
+            page.evaluate(
+                """html => {
+                  if (!window.tinymce) return false;
+                  const lista = (tinymce.get && tinymce.get()) || tinymce.editors || [];
+                  const e = [...lista].find(x => x.iframeElement && x.iframeElement.closest('.model-detail-content'));
+                  if (!e) return false;
+                  e.setContent(html);
+                  if (e.undoManager) e.undoManager.add();
+                  // tinymce-vue guarda lo escrito cuando el editor avisa de 'change', 'input', 'undo' o 'redo'
+                  if (e.dispatch) e.dispatch('change'); else if (e.fire) e.fire('change');
+                  return true;
+                }""",
+                html,
+            ) == true
+        } catch (_: Exception) {
+            false
+        }
         val cuerpo = page.frameLocator(".model-detail-content iframe[id$='_ifr']").first().locator("body")
-        cuerpo.click()
-        page.keyboard().press("Control+A")
-        page.keyboard().press("Delete")
-        val lineas = texto.split(Regex("\\R"))
-        for ((i, linea) in lineas.withIndex()) {
-            if (i > 0) page.keyboard().press("Enter")
-            if (linea.isNotEmpty()) page.keyboard().insertText(linea)
+        if (puesto) {
+            // Una tecla de verdad (espacio y borrarlo) para que la web lo dé por escrito
+            cuerpo.click()
+            page.keyboard().press("End")
+            page.keyboard().type(" ")
+            page.keyboard().press("Backspace")
+        } else {
+            progreso.nota("no he podido meter la descripción de golpe: la escribo tecleando (puede salir alguna lista)")
+            cuerpo.click()
+            page.keyboard().press("Control+A")
+            page.keyboard().press("Delete")
+            val lineas = texto.split(Regex("\\R"))
+            for ((i, linea) in lineas.withIndex()) {
+                if (i > 0) page.keyboard().press("Enter")
+                if (linea.isNotEmpty()) page.keyboard().insertText(linea)
+            }
         }
         if (textoDescripcion(page).isNullOrBlank()) throw IllegalStateException("no se ha quedado escrita la descripción")
     }
+
+    private fun escaparHtml(t: String): String =
+        t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
     /** El texto de la descripción, leído del propio editor. */
     private fun textoDescripcion(page: Page): String? = page.evaluate(
@@ -669,12 +746,16 @@ class SubidorCreality(
 
     // ------------------------------------------------------------------ utilidades
 
-    private fun haySesion(page: Page): Boolean = try {
+    /**
+     * Lo que dice la página de la sesión (`$sisLogin` en `__NUXT__.state`): true o false; null si no
+     * se sabe porque la página no ha cargado bien (así un corte de red no se toma por "sin sesión").
+     */
+    private fun haySesion(page: Page): Boolean? = try {
         page.evaluate(
-            "() => { const s = window.__NUXT__ && window.__NUXT__.state; return !!(s && s['\$sisLogin'] === true); }"
-        ) as Boolean
+            "() => { const s = window.__NUXT__ && window.__NUXT__.state; return s ? s['\$sisLogin'] === true : null; }"
+        ) as Boolean?
     } catch (_: Exception) {
-        false
+        null
     }
 
     /** Aviso de cookies: "Reject all" ("Rechazar todo" en español). */

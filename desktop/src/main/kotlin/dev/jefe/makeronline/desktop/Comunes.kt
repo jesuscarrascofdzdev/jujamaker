@@ -130,13 +130,16 @@ fun Desplegable(
 
 /** Una casilla de marcar con su texto. */
 @Composable
-fun Casilla(texto: String, marcada: Boolean, activa: Boolean, alCambiar: (Boolean) -> Unit) {
+fun Casilla(texto: String, marcada: Boolean, activa: Boolean, detalle: String? = null, alCambiar: (Boolean) -> Unit) {
     Row(
         Modifier.clip(RoundedCornerShape(8.dp)).clickable(enabled = activa) { alCambiar(!marcada) }.padding(end = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = if (detalle == null) Alignment.CenterVertically else Alignment.Top,
     ) {
         Checkbox(checked = marcada, onCheckedChange = alCambiar, enabled = activa)
-        Text(texto, style = MaterialTheme.typography.bodyMedium, color = if (activa) Colores.texto else Colores.textoApagado)
+        Column(Modifier.padding(top = if (detalle == null) 0.dp else 12.dp)) {
+            Text(texto, style = MaterialTheme.typography.bodyMedium, color = if (activa) Colores.texto else Colores.textoApagado)
+            if (detalle != null) Text(detalle, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+        }
     }
 }
 

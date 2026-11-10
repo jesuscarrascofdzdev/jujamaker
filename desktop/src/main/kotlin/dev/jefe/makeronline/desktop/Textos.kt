@@ -1,5 +1,7 @@
 package dev.jefe.makeronline.desktop
 
+import dev.jefe.makeronline.Web
+
 /**
  * Todos los textos que ve la persona, en un único sitio.
  * Para traducir la app más adelante, solo habrá que tocar aquí.
@@ -20,8 +22,8 @@ object Textos {
     // ------------------------------------------------------------ sesión
     const val SESION_TITULO = "Sesión"
     const val SESION_EXPLICACION =
-        "La app usa tu Google Chrome con un perfil propio. Inicias sesión en MakerOnline una vez " +
-            "y se queda guardada en este ordenador; nunca sale de él."
+        "La app usa tu Google Chrome con un perfil propio. Inicias sesión en cada web una vez y se queda " +
+            "guardada en este ordenador; nunca sale de él."
     const val CHROME = "Google Chrome"
     const val CHROME_OK = "Instalado"
     const val CHROME_FALTA = "No lo encuentro. Sin Chrome la app no puede funcionar."
@@ -33,9 +35,20 @@ object Textos {
     const val SESION_INICIADA = "Sesión iniciada"
     fun sesionIniciadaComo(nombre: String) = "Sesión iniciada como $nombre"
     fun sinSesion(motivo: String?) = "Sin sesión" + (motivo?.let { ": $it" } ?: "")
-    /** En la barra de arriba. */
-    fun sesionEnBarra(nombre: String) = "Sesión iniciada · $nombre"
-    const val SIN_SESION_BARRA = "Sin sesión"
+    /** En la barra de arriba: cuántas webs tienen sesión. */
+    fun sesionesEnBarra(con: Int, total: Int) = "Sesiones: $con de $total"
+    /** En el detalle de la barra de arriba: la cuenta (si se sabe), "con sesión" o "sin sesión". */
+    fun estadoEnBarra(conSesion: Boolean, cuenta: String?) = if (!conSesion) "sin sesión" else cuenta ?: "con sesión"
+    const val WEBS_TITULO = "Webs donde subes"
+    fun comprobadoA(hora: String) = "Comprobado a las $hora"
+    const val SIN_SESION = "Sin sesión"
+    fun sesionIniciadaCorta(cuenta: String?) = if (cuenta == null) SESION_INICIADA else "$SESION_INICIADA · $cuenta"
+    /** Debajo del nombre de cada web, en Sesión. Al añadir una web nueva, el compilador pide ponerle el suyo. */
+    fun comoSube(web: Web) = when (web) {
+        Web.MAKERONLINE -> "Sube como borrador"
+        Web.CREALITY -> "Sube como privado · solo carpetas con .3mf"
+    }
+    const val CREALITY_NOTA = "Si la sesión caduca, la app te avisará al subir."
     const val INICIAR_SESION = "Iniciar sesión"
     const val VOLVER_A_INICIAR = "Volver a iniciar sesión"
     const val COMPROBAR = "Comprobar otra vez"
@@ -43,6 +56,14 @@ object Textos {
         "Se ha abierto Chrome en MakerOnline. Pulsa \"Log in\", elige \"Continuar con Google\" y entra " +
             "con tu cuenta. No inicies sesión en el propio Chrome (el botón de perfil de arriba a la " +
             "derecha), solo en la web. Cuando veas tu avatar en MakerOnline, vuelve aquí."
+    const val INSTRUCCIONES_LOGIN_CREALITY =
+        "Se ha abierto Chrome en Creality Cloud. Pulsa el botón para iniciar sesión (arriba a la derecha) y " +
+            "entra con tu cuenta. No inicies sesión en el propio Chrome (el botón de perfil de arriba a la " +
+            "derecha), solo en la web. Cuando veas tu avatar en Creality Cloud, vuelve aquí."
+    fun instruccionesLogin(web: Web) = when (web) {
+        Web.MAKERONLINE -> INSTRUCCIONES_LOGIN
+        Web.CREALITY -> INSTRUCCIONES_LOGIN_CREALITY
+    }
     const val YA_HE_ENTRADO = "Ya he entrado"
     const val CANCELAR = "Cancelar"
     fun carpetaDatos(ruta: String) = "Carpeta de datos: $ruta"
@@ -207,11 +228,14 @@ object Textos {
     // ------------------------------------------------------------ subir
     const val SUBIR_TITULO = "Subir"
     const val SUBIR_EXPLICACION =
-        "Sube como borrador cada carpeta de pendientes: un modelo por carpeta, con su .3mf (o .stl), una imagen y la descripción."
+        "Sube cada carpeta de pendientes (un modelo con su .3mf o .stl, una imagen y la descripción) a las webs " +
+            "que marques: a MakerOnline como borrador y a Creality Cloud como privado."
     const val FORMATO_CARPETAS =
         "Los nombres de los archivos dan igual. La portada es la imagen que se llama portada, cover o como la " +
-            "carpeta; si no, la primera. Los textos van en un .json o un .txt. Al subir, cada carpeta pasa a " +
-            "subidos/ (o a errores/, con una captura, si algo falla)."
+            "carpeta; si no, la primera. Los textos van en un .json o un .txt. A Creality Cloud solo se sube con " +
+            ".3mf. Cuando una carpeta está en todas las webs marcadas pasa a subidos/; si falla MakerOnline, a " +
+            "errores/ (con una captura). Si falla Creality, se queda en pendientes con error-creality.txt y la " +
+            "próxima vez solo se repite lo que falta."
     fun pendientesTitulo(n: Int) = "Pendientes ($n)"
     const val ABRIR_PENDIENTES = "Abrir la carpeta"
     const val VER_ERRORES_SUBIDA = "Ver errores"
@@ -235,29 +259,72 @@ object Textos {
     const val LE_FALTA_ALGO = "Le falta algo"
     const val SIN_PORTADA = "sin portada"
     const val SUBIR_AHORA = "Subir ahora"
+    const val DONDE_SUBIR = "Dónde (pulsa para marcar o desmarcar)"
+    /** En la ficha de cada web, debajo de su nombre. */
+    fun fichaWeb(web: Web) = when (web) {
+        Web.MAKERONLINE -> "Borrador"
+        Web.CREALITY -> "Privado · solo .3mf"
+    }
+    const val INICIAR_SESION_FLECHA = "Iniciar sesión →"
+    const val IR_A_SESION = "Ir a Sesión →"
+    /** El botón Subir dice adónde: "Subir a MakerOnline", "Subir a las dos"… */
+    fun botonSubir(webs: List<Web>) = when (webs.size) {
+        0 -> SUBIR
+        1 -> "Subir a " + webs[0].nombre
+        2 -> "Subir a las dos"
+        else -> "Subir a las ${webs.size}"
+    }
     const val QUE_CARPETAS = "Qué carpetas"
     const val POR_DEFECTO = " (por defecto)"
     fun todasLasValidas(n: Int) = "Todas las que están bien ($n)"
     const val SOLO_LA_SELECCIONADA = "Solo la seleccionada"
-    const val REVISAR = "Revisar antes de guardar"
+    const val REVISAR = "Revisar cada modelo antes de guardarlo"
     const val SUBIR = "Subir"
     const val VER_CHROME_AL_SUBIR = "Ver Chrome mientras sube"
     fun subirAyuda(verChrome: Boolean, revisar: Boolean) = when {
         verChrome -> "Chrome se abre a la vista mientras sube."
-        revisar -> "Chrome trabaja fuera de la pantalla y aparece para que revises cada borrador."
+        revisar -> "Chrome trabaja fuera de la pantalla y aparece para que revises cada modelo."
         else -> "Chrome trabaja fuera de la pantalla: no lo verás."
     }
     fun revisarAhora(modelo: String) =
         "Revisa el formulario de $modelo en la ventana de Chrome. Cuando lo hayas mirado, elige aquí:"
     const val GUARDAR_BORRADOR = "Guardar borrador"
+    const val ENVIAR_PRIVADO = "Enviar como privado"
     const val DESCARTAR = "Descartar (se queda en pendientes)"
     const val PARANDO_SUBIDA = "Parando: lo que no se haya guardado se queda en pendientes…"
     const val RESUMEN_SUBIDA_PARADA = "Parado (lo has pedido tú). Lo que no se ha guardado sigue en pendientes."
-    fun resumenSubida(subidos: Int, conError: Int, invalidos: Int, sinSubir: Int) =
-        "$subidos subidos · $conError con error · $invalidos no válidos · $sinSubir siguen en pendientes"
+    const val ULTIMA_SUBIDA = "Última subida"
+    const val TABLA_WEB = "Web"
+    const val TABLA_SUBIDOS = "Subidos"
+    const val TABLA_CON_ERROR = "Con error"
+    const val TABLA_SIN_SUBIR = "Sin subir"
+    fun yaEstabanEnCreality(n: Int) =
+        if (n == 1) "1 ya estaba en Creality Cloud." else "$n ya estaban en Creality Cloud."
+    fun sinCrealityPorStl(nombres: List<String>) =
+        "No van a Creality Cloud porque solo tienen .stl: " + nombres.joinToString(", ")
+    fun sinMakerOnline(nombres: List<String>) =
+        "No han ido a MakerOnline porque antes tienen que estar en Creality Cloud (siguen en pendientes): " +
+            nombres.joinToString(", ")
+    fun pasanASubidos(n: Int) =
+        if (n == 1) "1 carpeta pasa a subidos (ya está en Creality Cloud)." else "$n carpetas pasan a subidos (ya están en Creality Cloud)."
+    const val ERRORES_CREALITY_EN_LISTA =
+        "Las que han fallado en Creality siguen en pendientes: en la lista tienen el enlace a su error."
     const val ABRIR_SUBIDOS = "Abrir subidos"
     const val ABRIR_ERRORES = "Abrir errores"
     fun verError(carpeta: String) = "Ver el error de $carpeta"
+    /** El nombre corto de cada web, para las insignias de la lista. */
+    fun webCorta(web: Web) = when (web) {
+        Web.MAKERONLINE -> "MakerOnline"
+        Web.CREALITY -> "Creality"
+    }
+    /** Las insignias de cada carpeta: "Creality · subido", "MakerOnline · espera a Creality"… */
+    fun insignia(web: Web, estado: EstadoEnWeb) = webCorta(web) + " · " + when (estado) {
+        EstadoEnWeb.SUBIDO -> "subido"
+        EstadoEnWeb.ERROR -> "error · ver"
+        EstadoEnWeb.FALTA -> "falta"
+        EstadoEnWeb.ESPERA -> "espera a Creality"
+        EstadoEnWeb.SIN_3MF -> "no va (solo .stl)"
+    }
     const val COMO_CARPETA = "¿Cómo tiene que ser una carpeta?"
     // ------------------------------------------------------------ ventana Descripción
     const val AGREGAR_DESCRIPCION = "Agregar descripción"
@@ -337,6 +404,10 @@ object Textos {
     const val ERROR_SIN_CARPETA = "Elige una carpeta de la lista, o marca \"Todas las que están bien\"."
     const val ERROR_CARPETA_CON_PROBLEMAS = "La carpeta seleccionada tiene problemas: arréglalos antes de subirla."
     const val ERROR_NADA_PARA_SUBIR = "No hay ninguna carpeta lista para subir en pendientes."
+    const val ERROR_NINGUNA_WEB = "Marca al menos una web donde subir."
+    const val ERROR_SIN_SESIONES = "No hay sesión en ninguna web: iníciala en la pantalla Sesión."
+    const val ERROR_SESION_SIN_COMPROBAR =
+        "Todavía no sé en qué webs tienes la sesión iniciada: espera un momento o compruébalo en la pantalla Sesión."
 
     // ------------------------------------------------------------ errores
     fun errorInesperado(e: Throwable) =

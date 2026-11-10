@@ -9,7 +9,9 @@ import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,8 +22,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,11 +51,13 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.jefe.makeronline.Rutas
+import dev.jefe.makeronline.Web
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,13 +71,16 @@ import java.nio.file.Path
 import javax.imageio.ImageIO
 
 /**
- * Pantalla Subir. A la izquierda la lista de pendientes, cada carpeta con su miniatura y sus
- * botones; a la derecha "Subir ahora", el estado de la subida, cómo tiene que ser una carpeta y los
- * mensajes. Arriba, añadir modelos o carpetas.
+ * Pantalla Subir. A la izquierda la lista de pendientes, cada carpeta con su miniatura, sus
+ * insignias (en qué webs está o le falta estar) y sus botones; a la derecha "Subir ahora" (con una
+ * ficha por web), el estado de la subida, cómo tiene que ser una carpeta y los mensajes. Arriba,
+ * añadir modelos o carpetas.
+ *
+ * @param irASesion lleva a la pantalla Sesión (desde la ficha de una web sin sesión)
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
-fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope) {
+fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope, irASesion: () -> Unit) {
     // Cada vez que se abre la pantalla se vuelve a mirar pendientes/ (por si has cambiado algo)
     LaunchedEffect(Unit) {
         if (!s.enMarcha) s.cargar()
@@ -149,7 +159,7 @@ fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope) {
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     PanelRevision(s)
-                    PanelSubirAhora(s, alcance)
+                    PanelSubirAhora(s, alcance, irASesion)
                     PanelProgresoSubida(s)
                     PanelResumenSubida(s, rutas)
                     s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -161,12 +171,23 @@ fun PantallaSubir(s: EstadoSubida, rutas: Rutas, alcance: CoroutineScope) {
     }
 }
 
-/** Qué se sube, "Revisar antes de guardar" y los botones Subir y Parar. */
+/**
+ * Dónde se sube (una ficha por web, de dos en dos; solo se puede marcar si tiene sesión), qué
+ * carpetas, "Revisar" y los botones Subir y Parar.
+ */
 @Composable
-private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope) {
+private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope, irASesion: () -> Unit) {
     val editable = !s.enMarcha
     Tarjeta(espacio = 8.dp) {
         Text(Textos.SUBIR_AHORA, style = MaterialTheme.typography.titleMedium)
+        Text(Textos.DONDE_SUBIR, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+        for (fila in Web.entries.chunked(2)) {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (web in fila) FichaWeb(s, web, editable, irASesion, Modifier.weight(1f).fillMaxHeight())
+                if (fila.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+        Spacer(Modifier.height(4.dp))
         Text(Textos.QUE_CARPETAS, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
         Eleccion(Textos.todasLasValidas(s.carpetas.count { it.valida }), !s.soloSeleccionada, editable) {
             s.soloSeleccionada = false
@@ -177,10 +198,82 @@ private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope) {
         Casilla(Textos.VER_CHROME_AL_SUBIR, s.verChrome, editable) { s.cambiarVerChrome(it) }
         Casilla(Textos.REVISAR, s.revisar, editable) { s.revisar = it }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BotonPrincipal(Textos.SUBIR, { alcance.launch { s.subir() } }, Modifier.weight(1f), enabled = s.libre && !s.copiando)
+            BotonPrincipal(
+                Textos.botonSubir(s.websQueSuben()),
+                { alcance.launch { s.subir() } },
+                Modifier.weight(1f),
+                enabled = s.libre && !s.copiando,
+            )
             BotonParar(Textos.PARAR, { s.parar() }, enabled = s.enMarcha && !s.parando)
         }
         Text(Textos.subirAyuda(s.verChrome, s.revisar), style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+    }
+}
+
+/**
+ * La ficha de una web en "Dónde": se pulsa para marcarla o desmarcarla (se recuerda). Sin sesión,
+ * con el borde de rayas, el motivo y un enlace a la pantalla Sesión.
+ */
+@Composable
+private fun FichaWeb(s: EstadoSubida, web: Web, editable: Boolean, irASesion: () -> Unit, modifier: Modifier) {
+    val forma = RoundedCornerShape(10.dp)
+    val estiloNombre = MaterialTheme.typography.bodyMedium
+    val pequeno = MaterialTheme.typography.bodySmall
+    if (!s.disponible(web)) {
+        Column(
+            modifier.clip(forma)
+                .drawBehind {
+                    drawRoundRect(
+                        color = Colores.bordeCampo,
+                        style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))),
+                        cornerRadius = CornerRadius(10.dp.toPx()),
+                    )
+                }
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(Iconos.de(web), contentDescription = null, tint = Colores.textoApagado, modifier = Modifier.size(22.dp))
+            Text(web.nombre, style = estiloNombre, fontWeight = FontWeight.SemiBold, color = Colores.textoSuave)
+            Text(s.motivoNoDisponible(), style = pequeno, color = Colores.textoSuave)
+            // Mientras se comprueba la sesión, no hace falta ir a ningún sitio
+            if (!s.comprobandoSesion) {
+                Text(
+                    if (s.sesionComprobada) Textos.INICIAR_SESION_FLECHA else Textos.IR_A_SESION,
+                    style = pequeno,
+                    color = Colores.enlace,
+                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable(onClick = irASesion),
+                )
+            }
+        }
+        return
+    }
+    val marcada = s.marcada(web)
+    Box(
+        modifier.clip(forma)
+            .background(if (marcada) Colores.acentoFondo else Colores.tarjetaAlta)
+            .border(1.5.dp, if (marcada) Colores.acento else Colores.borde, forma)
+            .toggleable(value = marcada, enabled = editable, role = Role.Checkbox) { s.marcar(web, it) }
+            .padding(12.dp),
+    ) {
+        Column(Modifier.padding(end = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(
+                Iconos.de(web),
+                contentDescription = null,
+                tint = if (marcada) Colores.acentoTexto else Colores.textoClaro,
+                modifier = Modifier.size(22.dp),
+            )
+            Text(web.nombre, style = estiloNombre, fontWeight = FontWeight.SemiBold, color = Colores.texto)
+            Text(Textos.fichaWeb(web), style = pequeno, color = if (marcada) Colores.acentoTexto else Colores.textoSuave)
+        }
+        // La marca de "elegida", arriba a la derecha
+        if (marcada) {
+            Box(
+                Modifier.align(Alignment.TopEnd).size(20.dp).clip(CircleShape).background(Colores.acento),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Iconos.check, contentDescription = null, tint = Colores.sobreAcento, modifier = Modifier.size(14.dp))
+            }
+        }
     }
 }
 
@@ -282,6 +375,13 @@ private fun FilaCarpeta(s: EstadoSubida, c: CarpetaPendiente, editable: Boolean)
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            // En qué webs está ya, en cuáles falló y adónde le falta ir
+            val insignias = s.insignias(c)
+            if (insignias.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    for (i in insignias) InsigniaWeb(i)
+                }
+            }
             val avisos = if (elegida) c.avisos else c.avisos.take(1)
             for (a in avisos) {
                 Text(
@@ -306,6 +406,35 @@ private fun FilaCarpeta(s: EstadoSubida, c: CarpetaPendiente, editable: Boolean)
                 }
             }
         }
+    }
+}
+
+/**
+ * Una insignia de una carpeta ("Creality · subido"): verde si ya está, roja si falló (al pulsarla se
+ * abre el error) y gris si le falta.
+ */
+@Composable
+private fun InsigniaWeb(i: Insignia) {
+    val fondo = when (i.estado) {
+        EstadoEnWeb.SUBIDO -> Colores.verdeFondo
+        EstadoEnWeb.ERROR -> Colores.rojoFondo
+        else -> Colores.tarjetaAlta
+    }
+    val color = when (i.estado) {
+        EstadoEnWeb.SUBIDO -> Colores.verdeTexto
+        EstadoEnWeb.ERROR -> Colores.rojoTexto
+        else -> Colores.textoSuave
+    }
+    var m = Modifier.clip(CircleShape).background(fondo)
+    if (i.estado != EstadoEnWeb.SUBIDO && i.estado != EstadoEnWeb.ERROR) m = m.border(1.dp, Colores.borde, CircleShape)
+    i.archivo?.let { archivo -> m = m.clickable { abrir(archivo) } }
+    Row(
+        m.padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(Iconos.de(i.web), contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+        Text(Textos.insignia(i.web, i.estado), style = MaterialTheme.typography.bodySmall, color = color)
     }
 }
 
@@ -375,8 +504,10 @@ private fun PanelRevision(s: EstadoSubida) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("⏸ " + Textos.revisarAhora(modelo), style = MaterialTheme.typography.titleMedium, color = Colores.acentoTexto)
+        // El modelo llega como "flower · Creality Cloud": en Creality se envía (privado), en MakerOnline se guarda el borrador
+        val enviar = if (modelo.endsWith(Web.CREALITY.nombre)) Textos.ENVIAR_PRIVADO else Textos.GUARDAR_BORRADOR
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BotonPrincipal(Textos.GUARDAR_BORRADOR, { s.guardarBorrador() })
+            BotonPrincipal(enviar, { s.guardarBorrador() })
             BotonSecundario(Textos.DESCARTAR, { s.descartar() })
         }
     }
@@ -393,21 +524,87 @@ private fun PanelProgresoSubida(s: EstadoSubida) {
     }
 }
 
+/**
+ * Cómo ha ido la última subida: una tabla con una fila por web (subidos, con error y sin subir) y,
+ * debajo, lo que conviene saber.
+ */
 @Composable
 private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
     val r = s.resumen ?: return
-    Tarjeta(espacio = 8.dp) {
-        if (r.parado()) Text(Textos.RESUMEN_SUBIDA_PARADA, style = MaterialTheme.typography.titleSmall)
-        Text(Textos.resumenSubida(r.subidos(), r.conError(), r.invalidos(), r.sinSubir()), color = Colores.textoClaro)
-        Row {
-            if (r.subidos() > 0) BotonEnlace(Textos.ABRIR_SUBIDOS, { abrir(rutas.subidos) })
-            if (r.carpetasConError().isNotEmpty()) BotonEnlace(Textos.ABRIR_ERRORES, { abrir(rutas.errores) })
+    val pequeno = MaterialTheme.typography.bodySmall
+    val creality = r.creality
+    val makerOnline = r.makerOnline
+    val conError = makerOnline?.carpetasConError().orEmpty()
+    Tarjeta(espacio = 10.dp) {
+        Text(Textos.ULTIMA_SUBIDA, style = MaterialTheme.typography.titleMedium)
+        if (r.parado) Text(Textos.RESUMEN_SUBIDA_PARADA, style = MaterialTheme.typography.titleSmall)
+        Column {
+            FilaTabla(Textos.TABLA_WEB, Textos.TABLA_SUBIDOS, Textos.TABLA_CON_ERROR, Textos.TABLA_SIN_SUBIR, cabecera = true)
+            // Las que solo tienen .stl cuentan como "sin subir" en Creality (y se dice cuáles debajo)
+            if (creality != null || r.sin3mf.isNotEmpty()) {
+                FilaTabla(
+                    Web.CREALITY.nombre,
+                    (creality?.subidos ?: 0).toString(),
+                    (creality?.conError ?: 0).toString(),
+                    ((creality?.sinSubir ?: 0) + r.sin3mf.size).toString(),
+                )
+            }
+            if (makerOnline != null || r.sinMakerOnline.isNotEmpty()) {
+                FilaTabla(
+                    Web.MAKERONLINE.nombre,
+                    (makerOnline?.subidos() ?: 0).toString(),
+                    ((makerOnline?.conError() ?: 0) + (makerOnline?.invalidos() ?: 0)).toString(),
+                    ((makerOnline?.sinSubir() ?: 0) + r.sinMakerOnline.size).toString(),
+                )
+            }
         }
-        for (carpeta in r.carpetasConError()) {
+        if (creality != null && creality.yaSubidos > 0) {
+            Text(Textos.yaEstabanEnCreality(creality.yaSubidos), style = pequeno, color = Colores.textoSuave)
+        }
+        if (r.sin3mf.isNotEmpty()) Text(Textos.sinCrealityPorStl(r.sin3mf), style = pequeno, color = Colores.ambarTexto)
+        if (r.sinMakerOnline.isNotEmpty()) Text(Textos.sinMakerOnline(r.sinMakerOnline), style = pequeno, color = Colores.ambarTexto)
+        if (r.aSubidos > 0) Text(Textos.pasanASubidos(r.aSubidos), style = pequeno, color = Colores.textoClaro)
+        Row {
+            if ((makerOnline?.subidos() ?: 0) > 0 || r.aSubidos > 0) BotonEnlace(Textos.ABRIR_SUBIDOS, { abrir(rutas.subidos) })
+            if (conError.isNotEmpty()) BotonEnlace(Textos.ABRIR_ERRORES, { abrir(rutas.errores) })
+        }
+        if ((creality?.conError ?: 0) > 0) Text(Textos.ERRORES_CREALITY_EN_LISTA, style = pequeno, color = Colores.textoSuave)
+        for (carpeta in conError) {
             // La captura si la hay (falló al subir); si no, el error.txt (no era válida)
             val captura = carpeta.resolve("error.png")
             val archivo = if (Files.exists(captura)) captura else carpeta.resolve("error.txt")
             BotonEnlace(Textos.verError(carpeta.fileName.toString()), { abrir(archivo) })
         }
+    }
+}
+
+/**
+ * Una fila de la tabla del resumen: la web y sus tres cifras, alineadas a la derecha. Lo que no es
+ * cero en "Con error" sale en rojo y en "Sin subir", en ámbar. [cabecera]: los títulos, en gris.
+ */
+@Composable
+private fun FilaTabla(web: String, subidos: String, conError: String, sinSubir: String, cabecera: Boolean = false) {
+    val estilo = if (cabecera) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium
+    val normal = if (cabecera) Colores.textoSuave else Colores.textoClaro
+    Column {
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(web, style = estilo, color = if (cabecera) Colores.textoSuave else Colores.texto, modifier = Modifier.weight(1.6f))
+            Text(subidos, style = estilo, color = normal, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+            Text(
+                conError,
+                style = estilo,
+                color = if (!cabecera && conError != "0") Colores.rojoTexto else normal,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                sinSubir,
+                style = estilo,
+                color = if (!cabecera && sinSubir != "0") Colores.ambarTexto else normal,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Colores.bordeSuave))
     }
 }

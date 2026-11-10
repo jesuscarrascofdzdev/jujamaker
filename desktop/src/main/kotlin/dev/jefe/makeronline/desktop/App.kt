@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.jefe.makeronline.Web
 import java.awt.Desktop
 import java.net.URI
 import java.nio.file.Files
@@ -48,7 +50,7 @@ fun App(app: EstadoApp, ventana: EstadoVentana) {
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (app.pantalla) {
                         Pantalla.SESION -> PantallaSesion(app.sesion, app.datos, app.claude, alcance)
-                        Pantalla.SUBIR -> PantallaSubir(app.subida, app.rutas, alcance)
+                        Pantalla.SUBIR -> PantallaSubir(app.subida, app.rutas, alcance, irASesion = { app.pantalla = Pantalla.SESION })
                         Pantalla.DESCARGAR -> PantallaDescargar(app.descarga, app.edicion, alcance)
                     }
                 }
@@ -97,14 +99,8 @@ private fun BarraSuperior(app: EstadoApp, ventana: EstadoVentana) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val e = app.sesion.estado
-                when {
-                    e?.iniciada == true -> Etiqueta(
-                        e.nombre?.let { Textos.sesionEnBarra(it) } ?: Textos.SESION_INICIADA,
-                        Colores.verdeFondo, Colores.verdeTexto, punto = Colores.verde,
-                    )
-                    e != null -> Etiqueta(Textos.SIN_SESION_BARRA, Colores.rojoFondo, Colores.rojoTexto, punto = Colores.rojo)
-                }
+                // Las sesiones, en una sola etiqueta (cuando ya se han comprobado); al pulsarla, a Sesión
+                if (app.sesion.estado != null) EtiquetaSesiones(app.sesion) { app.pantalla = Pantalla.SESION }
                 app.ocupacion.tarea?.let { tarea ->
                     val cuenta = app.descarga.indiceUsuario?.let { " $it/${app.descarga.totalUsuarios}" }.orEmpty()
                     Etiqueta(tarea + cuenta, Colores.acentoFondo, Colores.acentoTexto)
@@ -113,6 +109,73 @@ private fun BarraSuperior(app: EstadoApp, ventana: EstadoVentana) {
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Colores.bordeSuave))
+    }
+}
+
+/**
+ * "Sesiones: 1 de 2", con un punto por web (verde con sesión, rojo sin ella): verde si están todas,
+ * ámbar si falta alguna y rojo si no hay ninguna. Al pasar el ratón enseña cada web y, al pulsarla,
+ * lleva a la pantalla Sesión.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun EtiquetaSesiones(s: EstadoSesion, alPulsar: () -> Unit) {
+    val con = Web.entries.count { s.iniciada(it) }
+    val total = Web.entries.size
+    val fondo = when (con) {
+        total -> Colores.verdeFondo
+        0 -> Colores.rojoFondo
+        else -> Colores.ambarFondo
+    }
+    val color = when (con) {
+        total -> Colores.verdeTexto
+        0 -> Colores.rojoTexto
+        else -> Colores.ambarTexto
+    }
+    TooltipArea(
+        tooltip = {
+            val forma = RoundedCornerShape(10.dp)
+            Column(
+                Modifier.width(260.dp)
+                    .clip(forma)
+                    .background(Colores.tarjetaAlta)
+                    .border(1.dp, Colores.bordeCampo, forma)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for (web in Web.entries) {
+                    val si = s.iniciada(web)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (si) Colores.verde else Colores.rojo))
+                        Text(web.nombre, style = MaterialTheme.typography.bodySmall, color = Colores.texto, modifier = Modifier.weight(1f))
+                        Text(
+                            Textos.estadoEnBarra(si, s.cuenta(web)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (si) Colores.verdeTexto else Colores.rojoTexto,
+                        )
+                    }
+                }
+            }
+        },
+    ) {
+        Row(
+            Modifier.clip(CircleShape)
+                .background(fondo)
+                .clickable(onClick = alPulsar)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            for (web in Web.entries) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(if (s.iniciada(web)) Colores.verde else Colores.rojo))
+            }
+            Text(
+                Textos.sesionesEnBarra(con, total),
+                style = MaterialTheme.typography.bodySmall,
+                color = color,
+                modifier = Modifier.padding(start = 2.dp),
+            )
+        }
     }
 }
 

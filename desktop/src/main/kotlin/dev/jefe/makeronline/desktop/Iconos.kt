@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+import dev.jefe.makeronline.Web
 
 /**
  * Los iconos de la app, dibujados con líneas (24×24). Son pocos: así no hace falta la librería
@@ -59,6 +60,29 @@ object Iconos {
         lineTo(4.5f, 16.25f); lineTo(4.5f, 7.75f); close()
         moveTo(4.5f, 7.75f); lineTo(12f, 12f); lineTo(19.5f, 7.75f)
         moveTo(12f, 12f); lineTo(12f, 20.5f)
+    }
+
+    /** Una nube (Creality Cloud). */
+    val nube: ImageVector = icono("nube") {
+        moveTo(7f, 18f)
+        curveTo(4.2f, 18f, 2.5f, 16f, 2.5f, 13.6f)
+        curveTo(2.5f, 11.4f, 4.1f, 9.6f, 6.3f, 9.4f)
+        curveTo(7.1f, 6.7f, 9.4f, 5f, 12f, 5f)
+        curveTo(15.3f, 5f, 17.9f, 7.5f, 18.1f, 10.7f)
+        curveTo(20.1f, 11.1f, 21.5f, 12.8f, 21.5f, 14.7f)
+        curveTo(21.5f, 16.5f, 20f, 18f, 18f, 18f)
+        close()
+    }
+
+    /** Una marca de "hecho" (fichas marcadas en Subir). */
+    val check: ImageVector = icono("check") {
+        moveTo(5f, 12f); lineTo(10f, 17f); lineTo(19f, 7f)
+    }
+
+    /** El icono de cada web. Al añadir una web nueva, el compilador pide ponerle el suyo aquí. */
+    fun de(web: Web): ImageVector = when (web) {
+        Web.MAKERONLINE -> cubo
+        Web.CREALITY -> nube
     }
 
     /** Dos eslabones (Conectar con Claude). */

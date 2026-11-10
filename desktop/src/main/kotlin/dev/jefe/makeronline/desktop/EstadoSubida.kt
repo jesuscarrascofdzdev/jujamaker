@@ -11,13 +11,16 @@ import dev.jefe.makeronline.InstruccionesIA
 import dev.jefe.makeronline.ModelFolder
 import dev.jefe.makeronline.ModelMeta
 import dev.jefe.makeronline.Rutas
+import dev.jefe.makeronline.SubidaMultiple
+import dev.jefe.makeronline.SubidorCreality
 import dev.jefe.makeronline.TextosCarpeta
-import dev.jefe.makeronline.Uploader
+import dev.jefe.makeronline.Web
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -35,12 +38,38 @@ data class CarpetaPendiente(
     val detalle: String? = null,
     /** La imagen de portada (aunque a la carpeta le falten cosas), para la miniatura; null si no hay. */
     val portada: Path? = null,
+    /** Si ya se ha subido a Creality Cloud (tiene subido-creality.txt): no se vuelve a subir allí. */
+    val enCreality: Boolean = false,
+    /** El error-creality.txt del último intento fallido de subirla a Creality, o null si no hay. */
+    val errorCreality: Path? = null,
+    /** Si tiene un .3mf (a Creality solo se sube con .3mf). */
+    val con3mf: Boolean = false,
 ) {
     val valida: Boolean get() = problemas.isEmpty()
 }
 
+/** Cómo está una carpeta en una web, para las insignias de la lista de pendientes. */
+enum class EstadoEnWeb {
+    /** Ya está allí. */
+    SUBIDO,
+    /** Falló la última vez (se puede ver el error). */
+    ERROR,
+    /** Se subirá allí al pulsar Subir. */
+    FALTA,
+    /** MakerOnline: se subirá cuando ya esté en Creality. */
+    ESPERA,
+    /** Creality: no va porque solo tiene .stl. */
+    SIN_3MF,
+}
+
+/** Una insignia de una carpeta: la web, cómo está allí y, si falló, el archivo con el error. */
+data class Insignia(val web: Web, val estado: EstadoEnWeb, val archivo: Path? = null)
+
 /**
  * Lo que enseña la pantalla Subir y lo que hacen sus botones.
+ *
+ * Se sube a las webs marcadas que tienen sesión (ver [sube]): MakerOnline como borrador y Creality
+ * Cloud como privado (ver SubidaMultiple en core).
  *
  * Todo se cambia desde el hilo de la ventana: las funciones `suspend` vuelven a él al terminar,
  * y los avisos de core llegan a él a través de [ProgresoApp].
@@ -50,6 +79,8 @@ class EstadoSubida(
     private val hilo: HiloNavegador,
     private val ocupacion: Ocupacion,
     private val ajustes: Ajustes,
+    /** Para saber en qué webs hay sesión. */
+    private val sesion: EstadoSesion,
 ) {
     // ------------------------------------------------------------ carpetas de pendientes/
 
@@ -84,9 +115,80 @@ class EstadoSubida(
         ajustes.verChromeAlSubir = ver
     }
 
+    /** Las webs marcadas para subir (se recuerdan). Solo se sube a las que además tienen sesión. */
+    var marcadaMakerOnline by mutableStateOf(ajustes.subirMakerOnline)
+        private set
+    var marcadaCreality by mutableStateOf(ajustes.subirCreality)
+        private set
+
+    fun marcada(web: Web): Boolean = when (web) {
+        Web.MAKERONLINE -> marcadaMakerOnline
+        Web.CREALITY -> marcadaCreality
+    }
+
+    fun marcar(web: Web, si: Boolean) {
+        when (web) {
+            Web.MAKERONLINE -> {
+                marcadaMakerOnline = si
+                ajustes.subirMakerOnline = si
+            }
+            Web.CREALITY -> {
+                marcadaCreality = si
+                ajustes.subirCreality = si
+            }
+        }
+    }
+
+    /** Si se puede elegir esa web: hay sesión iniciada en ella (pantalla Sesión). */
+    fun disponible(web: Web): Boolean = sesion.iniciada(web)
+
+    /** Si se va a subir a esa web: está marcada y tiene sesión. */
+    fun sube(web: Web): Boolean = marcada(web) && disponible(web)
+
+    /** Si ya se sabe en qué webs hay sesión (si no, todavía se está comprobando o ha fallado). */
+    val sesionComprobada: Boolean get() = sesion.estado != null
+
+    /** Si ahora mismo se está comprobando la sesión (pantalla Sesión). */
+    val comprobandoSesion: Boolean get() = ocupacion.tarea == Textos.TAREA_COMPROBANDO
+
+    /** Por qué no se puede elegir una web (en su ficha): no tiene sesión, se está comprobando o sin comprobar. */
+    fun motivoNoDisponible(): String = when {
+        sesionComprobada -> Textos.SIN_SESION
+        comprobandoSesion -> Textos.COMPROBANDO
+        else -> Textos.SIN_COMPROBAR
+    }
+
+    /** Las webs a las que se va a subir (marcadas y con sesión), para el texto del botón Subir. */
+    fun websQueSuben(): List<Web> = Web.entries.filter { sube(it) }
+
+    /**
+     * Las insignias de una carpeta, en el orden en que se sube (primero Creality):
+     *  - Creality: si ya está o si falló, siempre (es lo que ha pasado); si no, solo si se va a subir allí.
+     *  - MakerOnline: solo si se va a subir allí. En pendientes nunca está ya (al subirla, el Uploader
+     *    la mueve); si antes tiene que ir a Creality, "espera a Creality".
+     * Las carpetas con problemas solo enseñan lo que ya ha pasado.
+     */
+    fun insignias(c: CarpetaPendiente): List<Insignia> {
+        val creality = when {
+            c.enCreality -> Insignia(Web.CREALITY, EstadoEnWeb.SUBIDO)
+            c.errorCreality != null -> Insignia(Web.CREALITY, EstadoEnWeb.ERROR, c.errorCreality)
+            !c.valida || !sube(Web.CREALITY) -> null
+            !c.con3mf -> Insignia(Web.CREALITY, EstadoEnWeb.SIN_3MF)
+            else -> Insignia(Web.CREALITY, EstadoEnWeb.FALTA)
+        }
+        val makerOnline = when {
+            !c.valida || !sube(Web.MAKERONLINE) -> null
+            sube(Web.CREALITY) && c.con3mf && !c.enCreality -> Insignia(Web.MAKERONLINE, EstadoEnWeb.ESPERA)
+            else -> Insignia(Web.MAKERONLINE, EstadoEnWeb.FALTA)
+        }
+        return listOfNotNull(creality, makerOnline)
+    }
+
     /** Vuelve a coger lo que se recuerda (después de traer los datos de antes). */
     fun cargarAjustes() {
         verChrome = ajustes.verChromeAlSubir
+        marcadaMakerOnline = ajustes.subirMakerOnline
+        marcadaCreality = ajustes.subirCreality
     }
 
     // ------------------------------------------------------------ ejecución
@@ -102,7 +204,7 @@ class EstadoSubida(
     var porRevisar by mutableStateOf<String?>(null)
         private set
     val mensajes = mutableStateListOf<Evento.Mensaje>()
-    var resumen by mutableStateOf<Uploader.Resumen?>(null)
+    var resumen by mutableStateOf<SubidaMultiple.Resumen?>(null)
         private set
     var error by mutableStateOf<String?>(null)
         private set
@@ -142,16 +244,25 @@ class EstadoSubida(
         } catch (_: Exception) {
             null
         }
+        val enCreality = SubidorCreality.yaSubido(dir)
+        val errorCreality = dir.resolve(SubidorCreality.ERROR_TXT).takeIf { !enCreality && Files.isRegularFile(it) }
+        val con3mf = try {
+            ModelFolder.modelosDe(dir).any { it.fileName.toString().lowercase(Locale.ROOT).endsWith(".3mf") }
+        } catch (_: Exception) {
+            false
+        }
         return try {
             val m = ModelFolder.load(dir)
             val meta = m.meta()
             val detalle = meta.title() + " · " + meta.categoryOrDefault().joinToString(" - ") +
                 (if (meta.sinCategoria()) Textos.POR_DEFECTO else "")
-            CarpetaPendiente(nombre, dir, emptyList(), m.avisos(), detalle, portada)
+            CarpetaPendiente(nombre, dir, emptyList(), m.avisos(), detalle, portada, enCreality, errorCreality, con3mf)
         } catch (e: IllegalStateException) {
-            CarpetaPendiente(nombre, dir, (e.message ?: e.toString()).lines().filter { it.isNotBlank() }, portada = portada)
+            CarpetaPendiente(nombre, dir, (e.message ?: e.toString()).lines().filter { it.isNotBlank() },
+                portada = portada, enCreality = enCreality, errorCreality = errorCreality, con3mf = con3mf)
         } catch (e: IOException) {
-            CarpetaPendiente(nombre, dir, listOf(Textos.errorInesperado(e)), portada = portada)
+            CarpetaPendiente(nombre, dir, listOf(Textos.errorInesperado(e)),
+                portada = portada, enCreality = enCreality, errorCreality = errorCreality, con3mf = con3mf)
         }
     }
 
@@ -334,6 +445,13 @@ class EstadoSubida(
 
     /** Por qué no se puede empezar, o null si se puede. */
     fun problemaOpciones(): String? {
+        if (Web.entries.none { sube(it) }) {
+            return when {
+                sesion.estado == null -> Textos.ERROR_SESION_SIN_COMPROBAR
+                Web.entries.none { disponible(it) } -> Textos.ERROR_SIN_SESIONES
+                else -> Textos.ERROR_NINGUNA_WEB
+            }
+        }
         if (soloSeleccionada) {
             val c = carpetas.firstOrNull { it.nombre == seleccionada } ?: return Textos.ERROR_SIN_CARPETA
             if (!c.valida) return Textos.ERROR_CARPETA_CON_PROBLEMAS
@@ -343,7 +461,10 @@ class EstadoSubida(
         return null
     }
 
-    /** Sube como borrador las carpetas válidas (o solo la seleccionada). Las que tienen problemas no se tocan. */
+    /**
+     * Sube las carpetas válidas (o solo la seleccionada) a las webs marcadas con sesión. Las que tienen
+     * problemas no se tocan.
+     */
     suspend fun subir() {
         cargar() // por si has cambiado algo en la carpeta desde que se abrió la pantalla
         val problema = problemaOpciones()
@@ -359,12 +480,18 @@ class EstadoSubida(
         cancelacion = c
         val r = RevisionApp(c) { porRevisar = it }
         revision = r
-        val opciones = Uploader.Opciones(revisar, nombres, false, verChrome)
+        val opciones = SubidaMultiple.Opciones(
+            makerOnline = sube(Web.MAKERONLINE),
+            creality = sube(Web.CREALITY),
+            revisar = revisar,
+            carpetas = nombres,
+            verChrome = verChrome,
+        )
         try {
             resumen = hilo.ejecutar {
                 // Solo un programa con Chrome a la vez: comparten chrome-profile/ con la terminal
                 AgentLock.acquire(rutas.candado, "JujaMaker (subiendo)", false, progreso).use {
-                    Uploader(rutas, progreso, c, r).ejecutar(opciones)
+                    SubidaMultiple(rutas, progreso, c, r).ejecutar(opciones)
                 }
             }
         } catch (e: CancellationException) {
@@ -385,7 +512,7 @@ class EstadoSubida(
         }
     }
 
-    /** Botón "Guardar borrador" al revisar. */
+    /** Botón "Guardar borrador" (MakerOnline) o "Enviar como privado" (Creality) al revisar. */
     fun guardarBorrador() {
         revision?.responder(true)
     }
@@ -420,7 +547,7 @@ class EstadoSubida(
         when (e) {
             is Evento.Mensaje -> anotar(e)
             is Evento.Modelo -> modeloActual = "${e.indice}/${e.total} · ${e.titulo}"
-            else -> Unit // el Uploader no usa usuarios, páginas, pausas ni captchas
+            else -> Unit // al subir no hay usuarios, páginas, pausas ni captchas
         }
     }
 

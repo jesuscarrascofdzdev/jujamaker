@@ -1,8 +1,8 @@
 # JujaMaker
 
-App de escritorio para subir y descargar modelos 3D de [MakerOnline](https://www.makeronline.com) sin terminal, sin Maven y sin IntelliJ.
+App de escritorio para subir modelos 3D a [MakerOnline](https://www.makeronline.com) y [Creality Cloud](https://www.crealitycloud.com), y descargarlos de MakerOnline, sin terminal, sin Maven y sin IntelliJ.
 
-> **App no oficial.** JujaMaker no tiene relación con Anycubic ni con MakerOnline. Antes se llamaba MakerOnline Desktop.
+> **App no oficial.** JujaMaker no tiene relación con Anycubic, MakerOnline, Creality ni Creality Cloud. Antes se llamaba MakerOnline Desktop.
 
 Respeta las licencias de los modelos que descargues. Está basada en la herramienta de terminal [makerOnlineUploader](https://github.com/jesuscarrascofdzdev/makerOnlineUploader).
 
@@ -12,16 +12,16 @@ Respeta las licencias de los modelos que descargues. Está basada en la herramie
 
 - **Requisitos:** Windows 10 u 11 (64 bits) y [Google Chrome](https://www.google.com/chrome/). No hace falta instalar Java ni nada más: va dentro.
 - **Instalar:** abre `JujaMaker-Setup.exe`. Como el instalador no está firmado, Windows puede avisar con "Windows protegió tu PC": pulsa **Más información → Ejecutar de todas formas**. Se instala solo para tu usuario, sin permisos de administrador, con acceso directo en el escritorio y en el menú Inicio.
-- **Primer uso:** en la pantalla **Sesión**, pulsa **Iniciar sesión**, entra en MakerOnline en la ventana de Chrome que se abre y pulsa **Ya he entrado**. La sesión se queda guardada en tu ordenador.
+- **Primer uso:** en la pantalla **Sesión**, en "Webs donde subes", pulsa **Iniciar sesión** junto a MakerOnline (y junto a Creality Cloud si también subes allí), entra en la web en la ventana de Chrome que se abre y pulsa **Ya he entrado**. La sesión se queda guardada en tu ordenador.
 - **Actualizar:** descarga la versión nueva e instálala encima. Tu sesión y tus listas se conservan.
 - **Desinstalar:** Configuración de Windows → Aplicaciones → JujaMaker. Tus datos (sesión, listas, modelos pendientes) están aparte, en `%LOCALAPPDATA%\MakerOnline Desktop`: bórrala si quieres quitarlo todo.
 
 ## Qué hace
 
-- **Subir:** preparas cada modelo (archivo `.3mf` o `.stl`, portada y descripción) en un formulario o arrastrando su carpeta, y la app lo sube a MakerOnline como borrador. Puedes revisarlo antes de guardar y elegir si ves Chrome mientras sube o si trabaja fuera de la pantalla.
+- **Subir:** preparas cada modelo (archivo `.3mf` o `.stl`, portada y descripción) en un formulario o arrastrando su carpeta, y la app lo sube a las webs que marques: a MakerOnline como borrador y a Creality Cloud como privado (solo con `.3mf`; Creality lo convierte sola). Cada web es una ficha que se marca o desmarca (solo las que tienen sesión), y cada carpeta enseña en qué webs está ya o qué le falta. Puedes revisar cada modelo antes de guardarlo y elegir si ves Chrome mientras sube o si trabaja fuera de la pantalla.
 - **Descargar:** repasa los creadores que marques de tu lista, descarga sus modelos nuevos, les da like para no repetirlos y te deja todo en un zip en el escritorio. Espera de 10 a 30 segundos entre descarga y descarga.
 - **Sin IA,** o con la tuya: pega la descripción que te haya dado cualquier IA y el formulario se rellena solo, o conecta la app con Claude (pantalla Sesión).
-- La sesión de MakerOnline (perfil de Chrome) **nunca sale de tu ordenador**, y los captchas **no se saltan**: se enseña la ventana para que los resuelvas tú.
+- Las sesiones (perfil de Chrome) **nunca salen de tu ordenador**, y los captchas **no se saltan**: se enseña la ventana para que los resuelvas tú.
 
 > **Estado:** terminada (versión 1.3.1). Al descargar, la cuenta del creador de la app (juji-nya) va la primera: viene marcada y se puede desmarcar, pero no quitar.
 
@@ -151,11 +151,11 @@ La app instalada se puede usar desde tu Claude, con tu suscripción: Claude la a
   - `CarpetaDatos`: la carpeta de datos de la app (`%LOCALAPPDATA%\MakerOnline Desktop`, o la de `-Dmakeronline.datos`). La tarea `run` pasa la raíz del repo en `makeronline.datosAnteriores` para que Sesión ofrezca traer de ahí los datos (`TraerDatos`, estado en `EstadoDatos`): copia sin machacar, junta `usuarios.json` y `descargados.txt`, y copia el perfil de Chrome sin cachés a una carpeta aparte que renombra al final. Coge el candado de las dos carpetas.
   - Instalador: `compose.desktop.application.nativeDistributions` en `desktop/build.gradle.kts` (exe y msi, por usuario, con todo el Java dentro y `upgradeUuid` fijo). `javaHome` es el JDK 21 del toolchain, que trae jpackage. El icono está en `desktop/icono.ico` (instalador) y `desktop/src/main/resources/icono.png` (ventana).
   - `core/Browsers.playwright()` arranca Playwright con `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`: se usa el Chrome instalado y así no se descargan los navegadores de Playwright (unos 400 MB) la primera vez.
-  - `core/Sesion` comprueba la sesión (cookie `mo_access_token` + `api/user/personal/info`) y abre Chrome para iniciarla.
+  - `core/Sesion` comprueba la sesión de MakerOnline (cookie `mo_access_token` + `api/user/personal/info`) y la de Creality Cloud (solo que esté su cookie `model_token`; si ha caducado se ve al subir) y abre Chrome en la web que toque (`core/Web`) para iniciarla.
   - `core/ListaUsuarios` lee y guarda `usuarios.json` (lo usan el Downloader y la app) y saca un nombre legible de cada entrada (`"Nombre · URL-del-perfil"`, `"@usuario / Nombre"`…). Al guardar reescribe el archivo entero; antes, si no existe, copia el original en `usuarios.json.bak`.
   - `core/BuscadorUsuarios` encuentra a un usuario por la URL de su perfil (`window.__NUXT__.data[0].userInfo`) o por el buscador (`api/search/user`). Lo usan el Downloader y `Sesion.buscarUsuario`, que es lo que llama la app al añadir a alguien; la app lo guarda como `"Nombre · URL-del-perfil"`. `core/Api` hace las peticiones a la API con el token de la sesión.
   - `EstadoEdicion` + `DialogoUsuarios`: la ventana de Editar (añadir comprobando en MakerOnline, quitar con confirmación).
-  - `EstadoSubida` + `PantallaSubir`: lista `subidas/pendientes/` comprobando cada carpeta con `ModelFolder.load` (sin moverla) y solo pasa al Uploader las que están bien. Las carpetas arrastradas (o elegidas con "Añadir carpetas…") se copian a pendientes con `CopiaCarpetas`. `RevisionApp` es la `Revision` de la app: el Uploader espera en el hilo del navegador a que se pulse Guardar borrador o Descartar. `Uploader.Resumen.carpetasConError` dice dónde han quedado en `errores/`.
+  - `EstadoSubida` + `PantallaSubir`: lista `subidas/pendientes/` comprobando cada carpeta con `ModelFolder.load` (sin moverla) y solo sube las que están bien, con `core/SubidaMultiple` a las webs marcadas que tienen sesión (casillas recordadas en `ajustes.properties`). `SubidaMultiple` va primero a Creality (`SubidorCreality`, que no mueve carpetas y apunta lo subido en `subido-creality.txt`) y después a MakerOnline (`Uploader`, que mueve a `subidos/` o `errores/`) solo con las que ya están en Creality o no tienen `.3mf`; con solo Creality, mueve a `subidos/` las que ya están allí. Así nada se sube dos veces. Las carpetas arrastradas (o elegidas con "Añadir carpetas…") se copian a pendientes con `CopiaCarpetas`. `RevisionApp` es la `Revision` de la app: el subidor espera en el hilo del navegador a que se pulse Guardar borrador / Enviar como privado o Descartar. `Uploader.Resumen.carpetasConError` dice dónde han quedado en `errores/`.
   - `core/ModelFolder` comprueba una carpeta de modelo (nombres libres, ver arriba) y `core/TextosModelo` lee y escribe el `.txt` de textos.
   - Ventana Agregar / Editar modelo: `EdicionModelo` (estado: imagen, modelo y descripción; guarda a medias y pide el nombre de la carpeta la primera vez; la imagen se copia como `portada.<ext>`) + `VentanaModelo` (interfaz).
   - Ventana Descripción: `FormularioTextos` (estado) + `VentanaDescripcion` (interfaz). `core/TextosCarpeta` lee y guarda los textos de una carpeta sin exigir que esté completa. Las opciones de los desplegables salen de `core/CatalogoMakerOnline`, que solo tiene lo comprobado en la web (se completa con el Diagnóstico del formulario).

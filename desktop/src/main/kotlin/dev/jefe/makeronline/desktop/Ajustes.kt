@@ -49,6 +49,22 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
+    /** En Subir, si se sube a MakerOnline (por defecto, sí). Solo cuenta si hay sesión. */
+    var subirMakerOnline: Boolean
+        get() = valores.getProperty(SUBIR_MAKERONLINE)?.toBooleanStrictOrNull() ?: true
+        set(v) {
+            valores.setProperty(SUBIR_MAKERONLINE, v.toString())
+            guardar()
+        }
+
+    /** En Subir, si se sube a Creality Cloud (por defecto, sí). Solo cuenta si hay sesión. */
+    var subirCreality: Boolean
+        get() = valores.getProperty(SUBIR_CREALITY)?.toBooleanStrictOrNull() ?: true
+        set(v) {
+            valores.setProperty(SUBIR_CREALITY, v.toString())
+            guardar()
+        }
+
     /** En Descargar, cuántos de los últimos modelos de cada usuario se miran (por defecto, 10, como en la terminal). */
     var ultimosModelos: Int
         get() = valores.getProperty(ULTIMOS_MODELOS)?.toIntOrNull()?.takeIf { it >= 1 } ?: 10
@@ -105,6 +121,8 @@ class Ajustes(private val archivo: Path) {
         const val INCLUIR_CREADOR = "incluirCreador"
         const val DESMARCADOS = "usuariosDesmarcados"
         const val VER_CHROME_AL_SUBIR = "verChromeAlSubir"
+        const val SUBIR_MAKERONLINE = "subirMakerOnline"
+        const val SUBIR_CREALITY = "subirCreality"
         const val ULTIMOS_MODELOS = "ultimosModelos"
         const val MAXIMO_DESCARGAS = "maximoDescargas"
         const val VENTANA_MAXIMIZADA = "ventanaMaximizada"
