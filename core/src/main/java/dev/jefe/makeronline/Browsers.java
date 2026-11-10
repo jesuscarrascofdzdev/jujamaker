@@ -58,6 +58,10 @@ public final class Browsers {
                 .setHeadless(headless)
                 .setAcceptDownloads(true)
                 .setSlowMo(slowMoMs)
+                // Con el aislamiento de Chrome activado (sandbox). Si no, Playwright lo arranca con
+                // --no-sandbox: Chrome avisa en una barra de que afecta a la estabilidad y la seguridad,
+                // y es una señal más de navegador automatizado para comprobaciones como Cloudflare.
+                .setChromiumSandbox(true)
                 // Quita la marca de "navegador controlado por software"
                 // que Google usa para bloquear el login.
                 .setIgnoreDefaultArgs(List.of("--enable-automation"))
