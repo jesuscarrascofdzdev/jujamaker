@@ -120,7 +120,7 @@ class ColaPrintables(private val rutas: Rutas) {
             resumen = resumen,
             descripcion = descripcion,
             etiquetas = etiquetas,
-            categoria = CatalogoPrintables.paraMakerOnline(meta.category()),
+            categoria = CatalogoPrintables.CATEGORIA, // la misma para todos (ver CATEGORIA)
             licencia = licencia,
             archivos = archivos,
             avisos = avisos,

@@ -13,7 +13,7 @@
 
 | Pieza | Qué hace |
 |---|---|
-| `core/.../CatalogoPrintables.kt` | Categorías y licencias de Printables (texto exacto) y equivalencias desde MakerOnline |
+| `core/.../CatalogoPrintables.kt` | Categorías y licencias de Printables (texto exacto), la categoría de todos los modelos y las licencias desde MakerOnline |
 | `core/.../ColaPrintables.kt` | La cola: carpetas de `pendientes/` y `subidos/` sin `subido-printables.txt`; la ficha de cada una |
 | `core/.../ServidorPrintables.kt` | Servidor en `127.0.0.1:47812` para la extensión (solo `Origin: chrome-extension://` para POST) |
 | `core/.../DiagnosticoPrintables.kt` | Mira si Cloudflare deja pasar al Chrome de la app (no deja) |
@@ -52,7 +52,9 @@
 - **Summary (required)**: `textarea[id^="f-summary-"]`, `maxlength=120`, contador "0/120". MakerOnline no tiene
   resumen: la app usa la primera línea de la descripción (cortada a 120 con "…").
 - **Main category (required)**: `button[id^="f-category-"]` abre `.dropdown-menu.groupped` con títulos de grupo y
-  `button.option` (`data-index` = posición, no id). Se elige por grupo + texto (ver `CatalogoPrintables`).
+  `button.option` (`data-index` = posición, no id). Se elige por grupo + texto. **Todos los modelos van a
+  Toys & Games > Other Toys & Games** (decisión de la persona, 10/11/2026: una amplia que valga para todos;
+  se puede cambiar en Printables antes de publicar).
 - **Additional tags**: `input[id^="f-tags-"]`, "Use space to separate tags". Se escribe y Enter (keydown) o espacio;
   cada una es un `.badge`. "dos palabras" entra como dos etiquetas: la app ya las manda de una palabra.
 - **Model origin**: radios `name=authorship` (Original / Remix / Reupload, `value=on`). **Was AI used**: radios
@@ -75,7 +77,6 @@ las normas: **no subir dos veces el mismo modelo** (por eso `subido-printables.t
 ## Pendiente
 
 - [ ] Compilar en el PC, cargar la extensión y probar con un modelo de verdad (el .3mf de 13,8 MB de SKYLINE_GTR34).
-- [ ] Revisar las equivalencias de categorías (`CatalogoPrintables`, propuesta del 10/11/2026).
 - [ ] Borrar los borradores de prueba 1908893, 1908897 y 1908899 (con la persona).
 
 ## Si la web cambia
