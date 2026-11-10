@@ -512,6 +512,70 @@ class EstadoSubida(
         }
     }
 
+    /** Carpetas de subidos/ (ya en MakerOnline) que aún no están en Creality (ver [subirSubidosACreality]). */
+    var subidosSinCreality by mutableStateOf<List<String>>(emptyList())
+        private set
+
+    /** Vuelve a contar [subidosSinCreality] (lee las carpetas fuera del hilo de la interfaz). */
+    suspend fun contarSubidosSinCreality() {
+        subidosSinCreality = withContext(Dispatchers.IO) {
+            try {
+                SubidorCreality.subidosSinCreality(rutas)
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
+    }
+
+    /**
+     * Sube a Creality las carpetas de subidos/ que ya están en MakerOnline y aún no en Creality. El
+     * Uploader de MakerOnline las movió a subidos/, así que la subida normal (de pendientes/) ya no las ve.
+     * No se mueven: se apunta subido-creality.txt en cada una, como siempre.
+     */
+    suspend fun subirSubidosACreality() {
+        if (!disponible(Web.CREALITY)) {
+            error = motivoNoDisponible()
+            return
+        }
+        val nombres = withContext(Dispatchers.IO) { SubidorCreality.subidosSinCreality(rutas) }
+        if (nombres.isEmpty()) {
+            error = Textos.CREALITY_SUBIDOS_NADA
+            return
+        }
+        if (!ocupacion.empezar(Textos.TAREA_SUBIENDO)) return
+        reiniciar()
+        enMarcha = true
+        val c = Cancelacion()
+        cancelacion = c
+        val r = RevisionApp(c) { porRevisar = it }
+        revision = r
+        try {
+            resumen = hilo.ejecutar {
+                AgentLock.acquire(rutas.candado, "JujaMaker (subiendo a Creality)", false, progreso).use {
+                    val rc = SubidorCreality(rutas, progreso, c, r)
+                        .ejecutar(SubidorCreality.Opciones(revisar, nombres, false, verChrome, desdeSubidos = true))
+                    SubidaMultiple.Resumen(rc, null, emptyList(), emptyList(), 0, rc.parado)
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e // la app se está cerrando: no es un error
+        } catch (e: AgenteException) {
+            error = e.message
+        } catch (e: Exception) {
+            error = Textos.errorInesperado(e)
+        } finally {
+            enMarcha = false
+            parando = false
+            cancelacion = null
+            revision = null
+            porRevisar = null
+            modeloActual = null
+            ocupacion.terminar()
+            cargar()
+            contarSubidosSinCreality()
+        }
+    }
+
     /** Botón "Guardar borrador" (MakerOnline) o "Enviar como privado" (Creality) al revisar. */
     fun guardarBorrador() {
         revision?.responder(true)

@@ -217,6 +217,18 @@ private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope, irASesion:
             BotonParar(Textos.PARAR, { s.parar() }, enabled = s.enMarcha && !s.parando)
         }
         Text(Textos.subirAyuda(s.verChrome, s.revisar), style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+        // Las que ya están en MakerOnline (en subidos/) y aún no en Creality: la subida de arriba no las ve
+        LaunchedEffect(s.enMarcha) { if (!s.enMarcha) s.contarSubidosSinCreality() }
+        val faltan = s.subidosSinCreality.size
+        if (faltan > 0) {
+            Spacer(Modifier.height(4.dp))
+            Text(Textos.crealitySubidos(faltan), style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+            BotonSecundario(
+                Textos.CREALITY_SUBIDOS_BOTON,
+                { alcance.launch { s.subirSubidosACreality() } },
+                enabled = s.libre && !s.copiando && s.disponible(Web.CREALITY),
+            )
+        }
     }
 }
 

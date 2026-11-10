@@ -326,6 +326,12 @@ object Textos {
         EstadoEnWeb.SIN_3MF -> "no va (solo .stl)"
     }
     const val COMO_CARPETA = "¿Cómo tiene que ser una carpeta?"
+    // ------------------------------------------------------------ Creality: los que ya están en MakerOnline
+    fun crealitySubidos(n: Int) =
+        (if (n == 1) "1 carpeta ya subida a MakerOnline (en subidos) aún no está" else "$n carpetas ya subidas a MakerOnline (en subidos) aún no están") +
+            " en Creality Cloud. Se suben con las mismas opciones de arriba (ver Chrome, revisar) y no se mueven."
+    const val CREALITY_SUBIDOS_BOTON = "Subir a Creality las de subidos"
+    const val CREALITY_SUBIDOS_NADA = "No hay ninguna carpeta en subidos que falte en Creality Cloud (con .3mf)."
     // ------------------------------------------------------------ Printables (extensión de Chrome)
     const val PR_TITULO = "Printables"
     const val PR_EXPLICACION =
