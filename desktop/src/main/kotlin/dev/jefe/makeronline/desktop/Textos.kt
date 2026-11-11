@@ -385,7 +385,7 @@ object Textos {
         "Printables no deja entrar al Chrome de la app, así que se sube desde tu Chrome de siempre con la " +
             "extensión de JujaMaker. Al pulsar \"Subir a Printables\" se abre tu Chrome y la extensión rellena cada " +
             "modelo sola (como modelo original y sin IA), lo guarda como borrador y pasa sola al " +
-            "siguiente. Luego revisas los borradores en Printables y los publicas tú. Entran las carpetas de pendientes y de subidos que aún no están allí."
+            "siguiente. Luego revisas los borradores en Printables y los publicas tú. Entran las carpetas que metes en la app y aún no están allí (también cuando pasan a subidos al subirlas a MakerOnline); las que ya estaban en subidos de antes, no."
     fun prCuenta(porSubir: Int, conProblemas: Int, subidas: Int) =
         (if (porSubir == 1) "1 por subir" else "$porSubir por subir") +
             (if (conProblemas > 0) " · $conProblemas con problemas" else "") +

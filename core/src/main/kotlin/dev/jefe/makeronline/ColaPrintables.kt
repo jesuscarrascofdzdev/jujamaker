@@ -3,6 +3,7 @@ package dev.jefe.makeronline
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
 import java.text.Normalizer
 import java.time.LocalDateTime
@@ -19,10 +20,13 @@ import java.util.Locale
  * Printables se sube a mano en el Chrome de siempre y la extensión rellena el formulario con lo que le
  * da esta cola. La app no sube nada a Printables.
  *
- * Están en la cola las carpetas válidas de pendientes/ y también de subidos/ que no tienen
- * `subido-printables.txt`: así MakerOnline no tiene que esperar a Printables (al subir a MakerOnline la
- * carpeta pasa a subidos/, y desde ahí se sigue pudiendo subir a Printables cuando quieras). Ese archivo
- * importa: las condiciones de Printables prohíben subir dos veces el mismo modelo (cl. 3.2).
+ * Están en la cola las carpetas válidas que no tienen `subido-printables.txt` y que la persona ha metido
+ * en la app: las de pendientes/ y, de subidos/, solo las que pasaron antes por pendientes/ (al subir a
+ * MakerOnline la carpeta pasa a subidos/, y desde ahí se sigue pudiendo subir a Printables cuando
+ * quieras). Las que ya estaban en subidos/ de antes (subidas a MakerOnline hace tiempo) no entran: para
+ * saberlo, las carpetas que se ven en pendientes/ se apuntan en printables-vistas.txt
+ * ([Rutas.vistasPrintables]). `subido-printables.txt` importa: las condiciones de Printables prohíben
+ * subir dos veces el mismo modelo (cl. 3.2).
  *
  * Cada carpeta se nombra por su "clave": "pendientes/<nombre>" o "subidos/<nombre>".
  */
@@ -184,7 +188,10 @@ class ColaPrintables(private val rutas: Rutas) {
         return dir
     }
 
-    /** Las carpetas de pendientes/ y de subidos/, con dónde está cada una, por nombre. */
+    /**
+     * Las carpetas de pendientes/ y, de subidos/, las que se vieron en pendientes/ (ver la explicación de
+     * la clase), con dónde está cada una, por nombre. De paso apunta las de pendientes/ como vistas.
+     */
     private fun carpetas(): List<Pair<String, Path>> {
         fun de(donde: String, base: Path): List<Pair<String, Path>> = try {
             if (!Files.isDirectory(base)) emptyList()
@@ -192,7 +199,45 @@ class ColaPrintables(private val rutas: Rutas) {
         } catch (_: IOException) {
             emptyList()
         }
-        return de(PENDIENTES, rutas.pendientes) + de(SUBIDOS, rutas.subidos)
+        val pendientes = de(PENDIENTES, rutas.pendientes)
+        val subidos = de(SUBIDOS, rutas.subidos)
+        // La primera vez (sin printables-vistas.txt) también cuentan como vistas las de subidos/ que se
+        // subieron a MakerOnline desde que existe la cola de Printables: son de las que se metieron en
+        // la app pensando ya en Printables, pero pasaron a subidos/ antes de que se apuntaran.
+        val recientes = if (Files.exists(rutas.vistasPrintables)) emptyList() else subidos.filter { subidaReciente(it.second) }
+        val vistas = apuntarVistas((pendientes + recientes).map { it.second.fileName.toString() })
+        return pendientes + subidos.filter { it.second.fileName.toString() in vistas }
+    }
+
+    /** Si la carpeta se subió a MakerOnline (resultado.png del Uploader) desde [DESDE_COLA] en adelante. */
+    private fun subidaReciente(dir: Path): Boolean = try {
+        val r = dir.resolve("resultado.png")
+        Files.exists(r) && Files.getLastModifiedTime(r).toInstant() >= DESDE_COLA
+    } catch (_: IOException) {
+        false
+    }
+
+    /** Añade [nombres] a printables-vistas.txt (uno por línea) y devuelve todas las vistas. */
+    private fun apuntarVistas(nombres: List<String>): Set<String> {
+        val archivo = rutas.vistasPrintables
+        val vistas = try {
+            if (Files.exists(archivo)) Files.readAllLines(archivo, Charsets.UTF_8).map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+            else emptySet()
+        } catch (_: IOException) {
+            emptySet()
+        }
+        val nuevas = nombres.filter { it !in vistas }
+        if (nuevas.isNotEmpty()) {
+            try {
+                Files.writeString(
+                    archivo, nuevas.joinToString("\n", postfix = "\n"), Charsets.UTF_8,
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND,
+                )
+            } catch (_: IOException) {
+                // si no se puede apuntar, esta vez cuentan igual (están en pendientes/)
+            }
+        }
+        return vistas + nuevas
     }
 
     companion object {
@@ -208,6 +253,8 @@ class ColaPrintables(private val rutas: Rutas) {
         /** Dentro de la carpeta del modelo: lo subido a Printables (id del modelo, dirección y fecha). */
         const val REGISTRO = "subido-printables.txt"
 
+        /** Desde cuándo existe la cola de Printables (rama printables, 10/11/2026). */
+        private val DESDE_COLA: java.time.Instant = java.time.LocalDate.of(2026, 11, 10).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant()
         private const val PENDIENTES = "pendientes"
         private const val SUBIDOS = "subidos"
         private val FECHA = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")

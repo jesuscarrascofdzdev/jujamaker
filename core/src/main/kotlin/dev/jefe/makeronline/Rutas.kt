@@ -32,6 +32,12 @@ class Rutas @JvmOverloads constructor(
     /** Como [registro], pero de Creality Cloud: un id de modelo por línea. */
     val registroCreality: Path get() = datos.resolve("descargados-creality.txt")
 
+    /**
+     * Las carpetas que se han visto en pendientes/ (una por línea): de subidos/, solo esas van a la cola
+     * de Printables, no las que ya estaban subidas a MakerOnline de antes (ver ColaPrintables).
+     */
+    val vistasPrintables: Path get() = datos.resolve("printables-vistas.txt")
+
     /** Lista de usuarios de Printables de los que se descarga (con la extensión de Chrome). */
     val usuariosPrintables: Path get() = datos.resolve("usuarios-printables.json")
 
