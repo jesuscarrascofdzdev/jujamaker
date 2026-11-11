@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "JujaMaker · Printables",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Rellena el formulario de subida de Printables con los modelos que prepara JujaMaker. Tú revisas y guardas cada uno.",
   "host_permissions": ["http://127.0.0.1:47812/*"],
   "background": { "service_worker": "background.js" },

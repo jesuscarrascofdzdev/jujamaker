@@ -141,7 +141,8 @@
     $('.rellenar').disabled = ocupado || !ficha || !enFormulario();
     $('.saltar').disabled = ocupado || !ficha;
     $('.abrir').disabled = ocupado;
-    $('.abrir').classList.toggle('oculto', enFormulario());
+    // En el formulario también se ve: "Formulario nuevo" empieza en uno limpio tras un error
+    $('.abrir').textContent = enFormulario() ? 'Formulario nuevo' : 'Abrir formulario';
     $('.seguido').textContent = seguido() ? 'Parar seguido' : 'Seguido';
     $('.seguido').disabled = !ficha && !seguido();
   }
@@ -212,7 +213,7 @@
         break;
       case 'error':
         pararSeguido('ha fallado algo');
-        anotar('Error: ' + m.texto + ' (en Printables no se ha guardado nada: si quieres, recarga y vuelve a probar)', 'error');
+        anotar('Error: ' + m.texto + ' (la extensión no ha guardado nada: para volver a probar, pulsa "Formulario nuevo" y empieza en uno limpio)', 'error');
         ocupado = false;
         pintarBotones();
         break;

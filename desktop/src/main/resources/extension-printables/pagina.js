@@ -68,6 +68,9 @@
 
   /** Lo que se ve subiendo: cada archivo de "Model Files" es una fila con su nombre editable. */
   const filasModelos = () => document.querySelectorAll('.print-file-name-input').length;
+  /** Los nombres de las filas de "Model Files" (el campo editable de cada una), en minúsculas. */
+  const nombresModelos = () => [...document.querySelectorAll('.print-file-name-input')]
+    .map((e) => limpio(e.value !== undefined ? e.value : e.innerText).toLowerCase());
   /** Los recuadros de "Photos" (sin el del "+"), en el orden de la web: el primero es la portada. */
   const fotos = () => [...document.querySelectorAll('.images .image')];
   const subiendo = () => [...document.querySelectorAll('.spinner-wrapper')].some(visible);
@@ -121,6 +124,13 @@
     }
     const modelos = archivos.filter((a) => a.tipo === 'modelo').length;
     const imagenes = archivos.filter((a) => a.tipo !== 'modelo').length;
+    // Una página, un modelo: si este formulario ya se ha rellenado (o se está rellenando), no se suelta
+    // nada más. Así un segundo "rellenar" (el modo seguido y el botón a la vez, un reintento tras un
+    // error...) no mete otra vez los archivos en el mismo modelo.
+    if (window.__jujamakerRellenado) {
+      throw new Error('en este formulario ya se han soltado archivos ("' + window.__jujamakerRellenado +
+        '"). Pulsa "Formulario nuevo" en el panel para empezar uno limpio');
+    }
 
     // --- Archivos: se sueltan en la zona de arriba y Printables pone solo las imágenes en "Photos" y los
     // .stl/.3mf en "Model Files". Las fotos quedan en el orden en que terminan de subirse, no en el que
@@ -130,16 +140,26 @@
     const resto = archivos.filter((a) => a !== portada);
     await hasta(() => zonaArchivos(), 'la zona para soltar archivos');
     await esperar(1000); // que la web termine de arrancar antes de soltar nada
+    // El formulario tiene que estar vacío: si ya trae fotos o archivos del modelo (de un intento anterior
+    // en esta pestaña, o que la web ha recuperado), lo nuevo se sumaría y el modelo saldría con archivos
+    // de más. No se toca: se para y se avisa.
+    if (filasModelos() > 0 || fotos().length > 0 || subiendo()) {
+      throw new Error('el formulario ya tiene archivos (' + filasModelos() + ' en "Model Files", ' + fotos().length +
+        ' en "Photos"). Quítalos o abre un formulario nuevo antes de rellenar');
+    }
+    window.__jujamakerRellenado = ficha.titulo;
     let fichaPortada = null;
     if (portada) {
       paso('Subiendo la portada');
       soltar([portada]);
-      // Si la web aún no estaba lista para recibir archivos (recién abierta), no hace nada: se suelta otra vez
+      // Si la web aún no estaba lista para recibir archivos (recién abierta), no hace nada: se suelta otra
+      // vez. Pero solo si de verdad no ha hecho nada: si está subiendo (o ya ha salido algo), se espera.
       fichaPortada = await hasta(() => fotos()[0], '', 15000).catch(() => null);
-      if (!fichaPortada) {
+      if (!fichaPortada && !subiendo() && filasModelos() === 0 && fotos().length === 0) {
+        paso('La web no ha cogido la portada: la suelto otra vez');
         soltar([portada]);
-        fichaPortada = await hasta(() => fotos()[0], 'que salga la portada en "Photos"', 60000);
       }
+      fichaPortada = fichaPortada || await hasta(() => fotos()[0], 'que salga la portada en "Photos"', 60000);
       await finSubidas('que se suba la portada');
     }
     if (resto.length) {
@@ -150,6 +170,7 @@
       await finSubidas('que terminen de subirse los archivos');
     }
     if (fichaPortada) await ponerDePortada(fichaPortada, portada.file.name);
+    comprobarArchivos(modelos, imagenes); // antes de guardar: ni uno de más
 
     paso('Nombre y resumen');
     escribir(await hasta(() => campoNombre(), 'el campo "Model name"'), ficha.titulo);
@@ -200,6 +221,24 @@
     origen[0].click();
     ia[1].click();
     await hasta(() => origen[0].checked && ia[1].checked, 'que se marquen el origen y lo de la IA', 5000);
+  }
+
+  /**
+   * Que "Model Files" tenga exactamente los archivos del modelo (ni más ni repetidos) y "Photos" no tenga
+   * fotos de más. Si no, se para antes de "SAVE DRAFT": la persona lo arregla y guarda ella.
+   */
+  function comprobarArchivos(modelos, imagenes) {
+    const nombres = nombresModelos();
+    const repetidos = nombres.filter((n, i) => n && nombres.indexOf(n) !== i);
+    if (filasModelos() !== modelos || repetidos.length) {
+      throw new Error('en "Model Files" hay ' + filasModelos() + ' archivo(s) y tendría que haber ' + modelos +
+        (repetidos.length ? ' (repetidos: ' + [...new Set(repetidos)].join(', ') + ')' : '') +
+        '. No se ha guardado: quita los que sobran y pulsa tú "SAVE DRAFT"');
+    }
+    if (fotos().length > imagenes) {
+      throw new Error('en "Photos" hay ' + fotos().length + ' foto(s) y tendría que haber ' + imagenes +
+        '. No se ha guardado: quita las que sobran y pulsa tú "SAVE DRAFT"');
+    }
   }
 
   function soltar(lista) {
@@ -306,7 +345,9 @@
           problemas.push('la categoría guardada es "' + limpio(botonCategoria().innerText) + '"');
         }
         if (botonLicencia() && !limpio(botonLicencia().innerText).startsWith(ficha.licencia)) problemas.push('la licencia no es ' + ficha.licencia);
-        if (filasModelos() < modelos) problemas.push('faltan archivos del modelo');
+        if (filasModelos() !== modelos) {
+          problemas.push('hay ' + filasModelos() + ' archivo(s) del modelo y tendría que haber ' + modelos);
+        }
         if (publicado() && publicado().checked) problemas.push('está como PUBLISHED, no como borrador');
         contar('guardado', { modelo: m[1], problemas });
       } catch (e) {
@@ -315,14 +356,23 @@
     }, true);
   }
 
+  let enMarcha = false;
   window.addEventListener('message', async (ev) => {
     if (ev.source !== window || !ev.data || ev.data.fuente !== DE_PANEL || ev.data.tipo !== 'rellenar') return;
+    // Dos "rellenar" a la vez soltarían los archivos dos veces en el mismo modelo: el segundo se ignora
+    if (enMarcha) {
+      contar('aviso', { texto: 'Ya estoy rellenando este formulario: no empiezo otra vez.' });
+      return;
+    }
+    enMarcha = true;
     const { ficha, archivos } = ev.data;
     try {
       const files = archivos.map((a) => ({ tipo: a.tipo, file: new File([a.bytes], a.nombre, { type: a.mime }) }));
       await rellenar(ficha, files);
     } catch (e) {
       contar('error', { texto: e.message || String(e) });
+    } finally {
+      enMarcha = false;
     }
   });
 

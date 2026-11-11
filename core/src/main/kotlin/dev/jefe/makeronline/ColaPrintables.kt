@@ -3,9 +3,11 @@ package dev.jefe.makeronline
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.text.Normalizer
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.HexFormat
 import java.util.Locale
 
 /**
@@ -115,8 +117,15 @@ class ColaPrintables(private val rutas: Rutas) {
             avisos += "Printables solo admite etiquetas de una palabra en minúsculas, sin tildes ni símbolos: se han adaptado."
         }
 
+        // Dos archivos iguales byte a byte ("modelo.3mf" y "modelo (1).3mf") saldrían dos veces en "Model
+        // Files": va solo el primero, y se avisa. Printables no quiere subidas repetidas (cl. 3.2).
+        val modelos = sinRepetidos(m.modelos())
+        if (modelos.size < m.modelos().size) {
+            avisos += "Hay archivos del modelo repetidos (iguales byte a byte) en la carpeta: va solo uno de cada " +
+                "(${(m.modelos() - modelos.toSet()).joinToString(", ") { it.fileName.toString() }} no van)."
+        }
         val archivos = m.imagenes().mapIndexed { i, p -> Archivo(p.fileName.toString(), if (i == 0) Tipo.PORTADA else Tipo.FOTO) } +
-            m.modelos().map { Archivo(it.fileName.toString(), Tipo.MODELO) }
+            modelos.map { Archivo(it.fileName.toString(), Tipo.MODELO) }
 
         return Ficha(
             clave = clave,
@@ -202,6 +211,35 @@ class ColaPrintables(private val rutas: Rutas) {
         private const val PENDIENTES = "pendientes"
         private const val SUBIDOS = "subidos"
         private val FECHA = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+
+        /**
+         * Los archivos sin los que son iguales byte a byte a uno anterior de la lista (se compara el
+         * tamaño y, si coincide, el SHA-256). Si uno no se puede leer, se queda: ya fallará al pedirlo.
+         */
+        @JvmStatic
+        fun sinRepetidos(archivos: List<Path>): List<Path> {
+            val vistos = HashSet<Pair<Long, String>>()
+            return archivos.filter { p ->
+                try {
+                    vistos.add(Files.size(p) to resumenSha256(p))
+                } catch (_: IOException) {
+                    true
+                }
+            }
+        }
+
+        private fun resumenSha256(p: Path): String {
+            val md = MessageDigest.getInstance("SHA-256")
+            Files.newInputStream(p).use { e ->
+                val buf = ByteArray(1 shl 16)
+                while (true) {
+                    val n = e.read(buf)
+                    if (n < 0) break
+                    md.update(buf, 0, n)
+                }
+            }
+            return HexFormat.of().formatHex(md.digest())
+        }
 
         /** Si esa carpeta ya se subió a Printables. */
         @JvmStatic
