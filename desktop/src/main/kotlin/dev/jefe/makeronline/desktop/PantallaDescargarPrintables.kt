@@ -1,39 +1,68 @@
 package dev.jefe.makeronline.desktop
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.jefe.makeronline.ListaUsuariosPrintables
 
 /**
- * La tarjeta de Printables de la pantalla Descargar: su lista de usuarios, su máximo, sus botones y
- * cómo va. Va aparte del botón común porque descarga la extensión de Chrome, no la app (ver
- * [EstadoDescargaPrintables]). "Últimos modelos" y "todos" son los de las opciones comunes.
+ * La pestaña "Printables" de Usuarios en la pantalla Descargar (junto a las de MakerOnline y Creality).
+ * Va aparte de las de [dev.jefe.makeronline.Web] porque la descarga la hace la extensión de Chrome.
  */
 @Composable
-internal fun PanelDescargasPrintables(p: EstadoDescargaPrintables, d: EstadoDescargas) {
+internal fun PestanaPrintables(p: EstadoDescargaPrintables, activa: Boolean, modifier: Modifier) {
+    val color = if (activa) Colores.sobreAcento else Colores.textoClaro
+    Row(
+        modifier.clip(CircleShape)
+            .background(if (activa) Colores.acento else Colores.tarjetaAlta)
+            .clickable { p.pestanaActiva = true }
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            Textos.PRD_TITULO + " · ${p.marcados}/${p.usuarios.size}",
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (activa) FontWeight.SemiBold else FontWeight.Medium,
+            color = color, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * Lo que sale en la pestaña Printables: su lista de usuarios, su máximo, sus botones y cómo va. Tiene
+ * sus propios botones porque descarga la extensión de Chrome, no la app (ver [EstadoDescargaPrintables]).
+ * "Últimos modelos" y "todos" son los de las opciones comunes.
+ */
+@Composable
+internal fun ColumnScope.ContenidoDescargasPrintables(p: EstadoDescargaPrintables, d: EstadoDescargas) {
     val editable = !p.enMarcha && !d.enMarcha
     val puedeAgregar = editable && p.errorLista == null && p.texto.isNotBlank()
     val ultimos = if (d.todos) 0 else d.ultimos.toIntOrNull() ?: 0
     val puedeEmpezar = p.libre && (d.todos || ultimos >= 1)
 
-    Tarjeta(espacio = 8.dp) {
-        Text(Textos.PRD_TITULO, style = MaterialTheme.typography.titleMedium)
+    run {
         Text(Textos.PRD_EXPLICACION, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
 
         // ---- usuarios

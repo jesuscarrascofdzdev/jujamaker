@@ -33,7 +33,7 @@
    en un formulario que ya los tiene ni rellena dos veces la misma página, y no guarda si en "Model Files" no
    está exactamente lo que toca. Ver "Archivos de más en un modelo" en `docs/contexto-printables.md`.
 
-4. **Descargar de Printables** (11/11/2026). Tarjeta "Printables" en la pantalla Descargar, con su lista de
+4. **Descargar de Printables** (11/11/2026). Pestaña "Printables" en Usuarios de la pantalla Descargar (junto a MakerOnline y Creality), con su lista de
    usuarios (`usuarios-printables.json`), máximo y botones Simular / Descargar de Printables / Parar. Descarga la
    extensión (`descargas.js`) con la sesión de la persona y la app guarda y hace el zip, con la misma lógica que
    MakerOnline y Creality. Va aparte del botón común porque no la hace la app. Nuevos: `ListaUsuariosPrintables`,

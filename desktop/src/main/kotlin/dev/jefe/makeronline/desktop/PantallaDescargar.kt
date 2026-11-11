@@ -84,11 +84,7 @@ fun PantallaDescargar(
 
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             Column(Modifier.width(360.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
-                PanelUsuarios(d, e)
-                printables?.let {
-                    Spacer(Modifier.height(20.dp))
-                    PanelDescargasPrintables(it, d)
-                }
+                PanelUsuarios(d, e, printables)
             }
             Column(Modifier.width(300.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
                 PanelOpciones(d)
@@ -205,7 +201,9 @@ private fun FichaPagina(d: EstadoDescargas, web: Web, editable: Boolean, irASesi
 
 /** "Usuarios": una pestaña por web y, debajo, la lista de esa web. */
 @Composable
-private fun PanelUsuarios(d: EstadoDescargas, e: EstadoEdicion) {
+private fun PanelUsuarios(d: EstadoDescargas, e: EstadoEdicion, printables: EstadoDescargaPrintables?) {
+    // La pestaña de Printables va aparte de las de [Web]: la descarga la hace la extensión (ver EstadoDescargaPrintables)
+    val enPrintables = printables?.pestanaActiva == true
     Tarjeta {
         Text(Textos.USUARIOS, style = MaterialTheme.typography.titleMedium)
         Row(
@@ -217,7 +215,7 @@ private fun PanelUsuarios(d: EstadoDescargas, e: EstadoEdicion) {
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             for (web in Web.entries) {
-                val activa = web == d.pestana
+                val activa = web == d.pestana && !enPrintables
                 val apagada = !d.descarga(web) // no se va a descargar de ella ahora
                 val color = when {
                     activa -> Colores.sobreAcento
@@ -228,7 +226,10 @@ private fun PanelUsuarios(d: EstadoDescargas, e: EstadoEdicion) {
                     Modifier.weight(1f)
                         .clip(CircleShape)
                         .background(if (activa) Colores.acento else Colores.tarjetaAlta)
-                        .clickable { d.pestana = web }
+                        .clickable {
+                            d.pestana = web
+                            printables?.pestanaActiva = false
+                        }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
@@ -244,13 +245,18 @@ private fun PanelUsuarios(d: EstadoDescargas, e: EstadoEdicion) {
                     )
                 }
             }
+            if (printables != null) PestanaPrintables(printables, enPrintables, Modifier.weight(1f))
         }
-        if (!d.descarga(d.pestana)) {
-            Text(Textos.pestanaSinDescargar(d.pestana), style = MaterialTheme.typography.bodySmall, color = Colores.ambarTexto)
-        }
-        when (d.pestana) {
-            Web.MAKERONLINE -> UsuariosMakerOnline(d, e)
-            Web.CREALITY -> UsuariosCreality(d)
+        if (printables != null && enPrintables) {
+            ContenidoDescargasPrintables(printables, d)
+        } else {
+            if (!d.descarga(d.pestana)) {
+                Text(Textos.pestanaSinDescargar(d.pestana), style = MaterialTheme.typography.bodySmall, color = Colores.ambarTexto)
+            }
+            when (d.pestana) {
+                Web.MAKERONLINE -> UsuariosMakerOnline(d, e)
+                Web.CREALITY -> UsuariosCreality(d)
+            }
         }
     }
 }

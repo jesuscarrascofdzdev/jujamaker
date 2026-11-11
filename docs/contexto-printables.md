@@ -23,7 +23,7 @@
 | `.run/cola-printables.run.xml`, `.run/diagnostico-printables.run.xml` | Programas de terminal |
 | `core/.../ListaUsuariosPrintables.kt` | La lista de usuarios de los que se descarga (`usuarios-printables.json`), por su @handle |
 | `core/.../DescargasPrintables.kt` | Descargas: el trabajo para la extensión, dónde se guarda cada archivo, `info.json` y `descargados-printables.txt` |
-| `desktop/.../EstadoDescargaPrintables.kt`, `PantallaDescargarPrintables.kt` | Tarjeta "Printables" de la pantalla Descargar |
+| `desktop/.../EstadoDescargaPrintables.kt`, `PantallaDescargarPrintables.kt` | Pestaña "Printables" de Usuarios en la pantalla Descargar |
 | `extension-printables/descargas.js` | La parte de la extensión que descarga (se activa con `#jujamaker-descargar`) |
 
 ## Cómo se sube

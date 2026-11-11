@@ -34,6 +34,9 @@ class EstadoDescargaPrintables(
 ) {
     private val descargas: DescargasPrintables get() = printables.descargas
 
+    /** Si en Descargar se está viendo la pestaña Printables (en vez de la de una web de [dev.jefe.makeronline.Web]). */
+    var pestanaActiva by mutableStateOf(false)
+
     // ------------------------------------------------------------ lista de usuarios (usuarios-printables.json)
 
     var usuarios by mutableStateOf<List<String>>(emptyList())
