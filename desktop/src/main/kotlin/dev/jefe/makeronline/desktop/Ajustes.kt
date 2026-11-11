@@ -113,6 +113,22 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
+    /** En Descargar, el máximo de descargas de Printables de cada vez; null = sin límite (por defecto). */
+    var maximoPrintables: Int?
+        get() = valores.getProperty(MAXIMO_PRINTABLES)?.toIntOrNull()?.takeIf { it >= 1 }
+        set(v) {
+            if (v == null) valores.remove(MAXIMO_PRINTABLES) else valores.setProperty(MAXIMO_PRINTABLES, v.toString())
+            guardar()
+        }
+
+    /** Los usuarios de Printables desmarcados en Descargar, por su handle en minúsculas. */
+    var desmarcadosPrintables: Set<String>
+        get() = valores.getProperty(DESMARCADOS_PRINTABLES)?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
+        set(v) {
+            if (v.isEmpty()) valores.remove(DESMARCADOS_PRINTABLES) else valores.setProperty(DESMARCADOS_PRINTABLES, v.sorted().joinToString(","))
+            guardar()
+        }
+
     /** Si la ventana se abre ocupando toda la pantalla (por defecto, sí, como siempre). */
     var ventanaMaximizada: Boolean
         get() = valores.getProperty(VENTANA_MAXIMIZADA)?.toBooleanStrictOrNull() ?: true
@@ -161,6 +177,8 @@ class Ajustes(private val archivo: Path) {
         const val DESCARGAR_CREALITY = "descargarCreality"
         const val MAXIMO_CREALITY = "maximoCreality"
         const val DESMARCADOS_CREALITY = "usuariosCrealityDesmarcados"
+        const val MAXIMO_PRINTABLES = "maximoPrintables"
+        const val DESMARCADOS_PRINTABLES = "usuariosPrintablesDesmarcados"
         const val VENTANA_MAXIMIZADA = "ventanaMaximizada"
         const val VENTANA_ANCHO = "ventanaAncho"
         const val VENTANA_ALTO = "ventanaAlto"

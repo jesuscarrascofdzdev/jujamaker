@@ -25,11 +25,22 @@ import kotlin.system.exitProcess
  *   GET  /printables/archivo?carpeta=&nombre= → un archivo de esa ficha
  *   POST /printables/subido {carpeta, modelo} → apunta subido-printables.txt en la carpeta
  *
+ * Y para descargar de Printables (ver DescargasPrintables; la extensión descarga y la app guarda):
+ *   GET  /printables/descargas/trabajo                     → el trabajo en marcha, o {"activo": false}
+ *   POST /printables/descargas/evento  {trabajo, tipo, …}  → cómo va; devuelve {parar}
+ *   POST /printables/descargas/carpeta {trabajo, usuario, id, titulo} → {carpeta}
+ *   POST /printables/descargas/archivo?trabajo=&carpeta=&nombre= (cuerpo: el archivo) → {nombre}
+ *   POST /printables/descargas/info    {trabajo, carpeta, id, titulo, …} → escribe info.json
+ *   POST /printables/descargas/fin     {trabajo, parado}
+ * Si el trabajo no es el que está en marcha, responde 409 y la extensión para.
+ *
  * La app lo arranca al abrirse. También es un programa de terminal (configuración
  * "Cola de Printables"): lo arranca y espera hasta "parar" + ENTER.
  */
 class ServidorPrintables(
     private val cola: ColaPrintables,
+    /** Las descargas de Printables (null = el servidor solo sirve para subir, como en la terminal). */
+    private val descargas: DescargasPrintables? = null,
     /** Se avisa cada vez que se apunta un modelo como subido (clave e id del modelo en Printables). */
     private val alSubir: (String, String) -> Unit = { _, _ -> },
 ) : AutoCloseable {
@@ -52,6 +63,8 @@ class ServidorPrintables(
         s.createContext("/printables/") { ex ->
             try {
                 atender(ex)
+            } catch (e: DescargasPrintables.TrabajoNoValido) {
+                responder(ex, 409, json.createObjectNode().put("error", e.message).put("parar", true))
             } catch (e: Exception) {
                 responder(ex, 500, json.createObjectNode().put("error", e.message ?: e.toString()))
             } finally {
@@ -114,8 +127,35 @@ class ServidorPrintables(
                 alSubir(clave, modelo)
                 responder(ex, 200, json.createObjectNode().put("ok", true))
             }
+            ruta.startsWith("descargas/") && descargas != null -> atenderDescargas(ex, ruta.removePrefix("descargas/"), parametros, descargas)
             else -> responder(ex, 404, json.createObjectNode().put("error", "no existe: ${ex.requestMethod} /printables/$ruta"))
         }
+    }
+
+    private fun atenderDescargas(ex: HttpExchange, ruta: String, parametros: Map<String, String>, d: DescargasPrintables) {
+        val r: ObjectNode? = when {
+            ex.requestMethod == "GET" && ruta == "trabajo" -> d.trabajoJson()
+            ex.requestMethod == "POST" && ruta == "archivo" -> d.archivo(
+                parametros["trabajo"].orEmpty(), parametros["carpeta"].orEmpty(), parametros["nombre"].orEmpty(),
+                ex.requestBody.readAllBytes(),
+            )
+            ex.requestMethod == "POST" -> {
+                val cuerpo = json.readTree(ex.requestBody.readAllBytes())
+                when (ruta) {
+                    "evento" -> d.evento(cuerpo)
+                    "carpeta" -> d.carpeta(cuerpo)
+                    "info" -> d.info(cuerpo)
+                    "fin" -> d.fin(cuerpo)
+                    else -> null
+                }
+            }
+            else -> null
+        }
+        if (r == null) {
+            responder(ex, 404, json.createObjectNode().put("error", "no existe: ${ex.requestMethod} /printables/descargas/$ruta"))
+            return
+        }
+        responder(ex, 200, r)
     }
 
     private fun ficha(f: ColaPrintables.Ficha): ObjectNode = json.createObjectNode().apply {
@@ -149,7 +189,7 @@ class ServidorPrintables(
          */
         const val PUERTO = 47812
         /** Sube si cambia lo que se envía, para que la extensión avise si no son de la misma versión. */
-        const val VERSION_PROTOCOLO = 1
+        const val VERSION_PROTOCOLO = 2
 
         private fun parametros(consulta: String?): Map<String, String> =
             consulta.orEmpty().split('&').filter { it.isNotEmpty() }.associate { p ->

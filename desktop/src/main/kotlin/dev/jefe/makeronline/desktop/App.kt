@@ -51,7 +51,7 @@ fun App(app: EstadoApp, ventana: EstadoVentana) {
                     when (app.pantalla) {
                         Pantalla.SESION -> PantallaSesion(app.sesion, app.datos, app.claude, alcance)
                         Pantalla.SUBIR -> PantallaSubir(app.subida, app.rutas, alcance, irASesion = { app.pantalla = Pantalla.SESION }, printables = app.printables)
-                        Pantalla.DESCARGAR -> PantallaDescargar(app.descargas, app.edicion, alcance, irASesion = { app.pantalla = Pantalla.SESION })
+                        Pantalla.DESCARGAR -> PantallaDescargar(app.descargas, app.edicion, alcance, irASesion = { app.pantalla = Pantalla.SESION }, printables = app.descargasPrintables)
                     }
                 }
             }

@@ -64,10 +64,13 @@ fun PantallaDescargar(
     e: EstadoEdicion,
     alcance: CoroutineScope,
     irASesion: () -> Unit,
+    /** Las descargas de Printables (con la extensión de Chrome), en su propia tarjeta. */
+    printables: EstadoDescargaPrintables? = null,
 ) {
     // Cada vez que se abre la pantalla se vuelven a leer las listas (por si las has editado)
     LaunchedEffect(Unit) {
         if (!d.enMarcha) d.cargarListas()
+        if (printables != null && !printables.enMarcha) printables.cargarLista()
     }
     // La ventana de añadir y quitar usuarios de MakerOnline (se abre con "Editar")
     if (e.abierta) DialogoUsuarios(e, alcance)
@@ -82,6 +85,10 @@ fun PantallaDescargar(
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             Column(Modifier.width(360.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
                 PanelUsuarios(d, e)
+                printables?.let {
+                    Spacer(Modifier.height(20.dp))
+                    PanelDescargasPrintables(it, d)
+                }
             }
             Column(Modifier.width(300.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
                 PanelOpciones(d)

@@ -21,6 +21,10 @@
 | `desktop/.../PantallaSubir.kt` | Tarjeta "Printables": cuántos faltan, "Subir a Printables", carpeta de la extensión |
 | `desktop/src/main/resources/extension-printables/` | La extensión: `manifest.json`, `background.js`, `panel.js`, `pagina.js` |
 | `.run/cola-printables.run.xml`, `.run/diagnostico-printables.run.xml` | Programas de terminal |
+| `core/.../ListaUsuariosPrintables.kt` | La lista de usuarios de los que se descarga (`usuarios-printables.json`), por su @handle |
+| `core/.../DescargasPrintables.kt` | Descargas: el trabajo para la extensión, dónde se guarda cada archivo, `info.json` y `descargados-printables.txt` |
+| `desktop/.../EstadoDescargaPrintables.kt`, `PantallaDescargarPrintables.kt` | Tarjeta "Printables" de la pantalla Descargar |
+| `extension-printables/descargas.js` | La parte de la extensión que descarga (se activa con `#jujamaker-descargar`) |
 
 ## Cómo se sube
 
@@ -71,6 +75,47 @@
   banda "DRAFT".
 - **Borrar**: en `/model/<id>`, menú de tres puntos ("Open dropdown menu") → "Delete".
 
+## Archivos de más en un modelo (arreglado el 11/11/2026)
+
+A veces un modelo se guardaba con varios .3mf (iguales o no). El código no impedía que el formulario ya tuviera
+archivos al empezar (de un intento anterior en la misma pestaña, o un segundo "rellenar" a la vez) y al final
+solo se comprobaba que no *faltaran* archivos, no que no *sobraran*. Ahora:
+- `pagina.js`: un solo "rellenar" a la vez y uno por página; si el formulario ya trae fotos o archivos del
+  modelo, para sin soltar nada; la portada solo se reintenta si la web no ha hecho nada; antes de "SAVE DRAFT"
+  exige el número exacto de filas en "Model Files" y sin nombres repetidos (si no, para y no guarda); al
+  comprobar lo guardado también avisa si sobran.
+- `panel.js`: botón "Formulario nuevo" también en el formulario, para empezar limpio tras un error.
+- `ColaPrintables`: los archivos del modelo iguales byte a byte (SHA-256) van una sola vez, con aviso.
+- No se ha podido reproducir el fallo original: si vuelve a pasar, el panel dirá ahora cuántos archivos había.
+  Se miró si Printables guarda el formulario a medias (localStorage, sessionStorage, IndexedDB): no guarda nada.
+
+## Descargar de Printables (11/11/2026)
+
+Misma lógica que MakerOnline y Creality (últimos N gratis de cada usuario, saltar los que tienen tu like, like al
+terminar, `descargados-printables.txt`, máximo por vez, pausa de 10 a 30 s, zip del escritorio), pero **descarga la
+extensión** en el Chrome de la persona: la app no puede entrar (Cloudflare). "Descargar de Printables" en la app
+prepara el trabajo (`DescargasPrintables`) y abre `https://www.printables.com/#jujamaker-descargar`; la extensión
+(`descargas.js`) lo pide, recorre usuarios y modelos con la API de la web y le pasa cada archivo a la app
+(`ServidorPrintables`, rutas `/printables/descargas/…`). Los archivos los baja `background.js` (host_permissions de
+files/media.printables.com) para que no pasen por los mensajes. Al terminar o parar, la app hace el zip.
+
+Comprobado en la web el 11/11/2026 (Claude in Chrome, sesión de la persona; sin descargar nada ni dar likes):
+- **API**: `POST https://api.printables.com/graphql/` con la sesión (`credentials: 'include'`), sin más cabeceras
+  que `content-type` (la web añade `client-uid` y `graphql-client-version`, no hacen falta). Sin introspección.
+- **Modelos de un usuario**: `userModels(userId: "@handle", paid: free, limit: 36, cursor, ordering: "-first_publish")`
+  → `cursor` e `items { id name liked price club: premium user { handle publicUsername } }`. `liked` es el like de
+  la persona. El handle también vale con el número de usuario.
+- **Un modelo**: `print(id) { name description (HTML) summary tags { name } image { filePath } license { name }
+  category { path { nameEn } } user { publicUsername } stls { id name fileSize folder } gcodes otherFiles
+  downloadPacks }`. En `stls` van los .stl y .3mf (a veces con nombre "x.stl.stl"). La licencia sale en el idioma
+  de `accept-language`: se pide en inglés.
+- **Enlace de descarga**: `mutation GetDownloadLink(id, printId, fileType: stl, source: model_detail)` →
+  `output.link` firmado en `files.printables.com` (es lo que hace el botón "Download" de cada archivo).
+- **Fotos**: `https://media.printables.com/<filePath>` (la original; también vale files.printables.com).
+- **Like**: `mutation LikeCreate(targetObjectId, targetType: LikeTargetTypeEnum)`. El valor **`print`** se sacó
+  del código de la web; **no se ha probado** (no se dio ningún like). Si falla, la extensión avisa una vez y no lo
+  vuelve a intentar en esa vez; lo descargado queda apuntado y la próxima vez solo le faltará el like.
+
 ## Condiciones de Printables (válidas desde el 15/10/2026)
 
 https://www.prusa3d.com/page/printables-com-terms-of-service_231249/ — no tienen ninguna cláusula sobre acceso
@@ -78,6 +123,10 @@ automático, bots o scripts. Sí dicen (cl. 3.2) que las subidas duplicadas o re
 las normas: **no subir dos veces el mismo modelo** (por eso `subido-printables.txt`).
 
 ## Pendiente
+
+- [ ] Compilar y probar la descarga: primero "Simular", luego un usuario con "Máximo 1". Confirmar que el like
+      funciona (`targetType: print`) y anotarlo aquí.
+- [ ] Probar la subida con el arreglo de archivos de más (extensión 1.2.0: en chrome://extensions, ↻).
 
 - [ ] Compilar en el PC, cargar la extensión y probar con un modelo de verdad (el .3mf de 13,8 MB de SKYLINE_GTR34).
 - [ ] Borrar los borradores de prueba 1908893, 1908897 y 1908899 (con la persona).

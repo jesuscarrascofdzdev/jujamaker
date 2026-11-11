@@ -29,7 +29,20 @@
    (terminal: `--subidos`), `SubidorCreality.subidosSinCreality(rutas)` y el botón **"Subir a Creality las de
    subidos"** en Subir (`EstadoSubida.subirSubidosACreality`). No mueve carpetas.
 
-3. **Documentación**: `CLAUDE.md` (contexto y reglas del proyecto para la IA), `docs/contexto-printables.md`
+3. **Printables: arreglo de archivos de más en un modelo** (11/11/2026). La extensión ya no suelta archivos
+   en un formulario que ya los tiene ni rellena dos veces la misma página, y no guarda si en "Model Files" no
+   está exactamente lo que toca. Ver "Archivos de más en un modelo" en `docs/contexto-printables.md`.
+
+4. **Descargar de Printables** (11/11/2026). Tarjeta "Printables" en la pantalla Descargar, con su lista de
+   usuarios (`usuarios-printables.json`), máximo y botones Simular / Descargar de Printables / Parar. Descarga la
+   extensión (`descargas.js`) con la sesión de la persona y la app guarda y hace el zip, con la misma lógica que
+   MakerOnline y Creality. Va aparte del botón común porque no la hace la app. Nuevos: `ListaUsuariosPrintables`,
+   `DescargasPrintables`, `EstadoDescargaPrintables`, `PantallaDescargarPrintables`; cambiados: `ServidorPrintables`
+   (rutas `/printables/descargas/…`, protocolo 2), `Rutas`, `Ajustes`, `EstadoPrintables`, `EstadoApp`, `App`,
+   `PantallaDescargar`, `Textos`, `DescargadorCreality` (`limpio` y `htmlATexto` pasan a `internal` para reutilizarlas).
+   Extensión 1.2.0 (nuevos permisos para files/media.printables.com).
+
+5. **Documentación**: `CLAUDE.md` (contexto y reglas del proyecto para la IA), `docs/contexto-printables.md`
    (todo lo comprobado en la web, con fecha) y este archivo.
 
 ## Archivos

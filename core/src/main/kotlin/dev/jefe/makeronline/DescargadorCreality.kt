@@ -491,7 +491,8 @@ class DescargadorCreality(
         private val JSON = ObjectMapper()
         private val FECHA: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
-        private fun limpio(nombre: String, max: Int): String {
+        /** Nombre válido de carpeta o archivo de Windows (también lo usa DescargasPrintables). */
+        internal fun limpio(nombre: String, max: Int): String {
             var s = nombre.replace(Regex("[\\\\/:*?\"<>|\\p{Cntrl}]"), "_").replace(Regex("\\s+"), " ").trim()
             if (s.length > max) s = s.substring(0, max).trim()
             s = s.replace(Regex("[. ]+$"), "")
@@ -504,7 +505,8 @@ class DescargadorCreality(
             return if (ext.matches(Regex("jpe?g|png|webp|gif"))) ".$ext" else ".jpg"
         }
 
-        private fun htmlATexto(html: String): String {
+        /** El texto de una descripción en HTML (también lo usa DescargasPrintables). */
+        internal fun htmlATexto(html: String): String {
             var t = html.replace(Regex("(?i)<br\\s*/?>"), "\n").replace(Regex("(?i)</(p|li|h[1-6])>"), "\n").replace(Regex("<[^>]+>"), "")
             t = t.replace("&nbsp;", " ").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")
                 .replace("&#39;", "'").replace("&ndash;", "–").replace("&mdash;", "—").replace("&amp;", "&")

@@ -5,7 +5,11 @@
 // con el origen de la extensión ("chrome-extension://…"), que es lo único que la app acepta.
 
 const APP = 'http://127.0.0.1:47812/printables';
-const VERSION_PROTOCOLO = 1;
+const VERSION_PROTOCOLO = 2;
+/** Las rutas de descargas a las que el script de descargas puede mandar datos (ver DescargasPrintables). */
+const RUTAS_DESCARGAS = ['evento', 'carpeta', 'info', 'fin'];
+/** De dónde se bajan los archivos y las fotos de Printables (comprobado el 11/11/2026). */
+const ORIGENES_ARCHIVOS = ['https://files.printables.com/', 'https://media.printables.com/'];
 
 chrome.runtime.onMessage.addListener((mensaje, _remitente, responder) => {
   atender(mensaje)
@@ -37,6 +41,36 @@ async function atender(m) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ carpeta: m.carpeta, modelo: m.modelo }),
       });
+    // ---- descargas (descargas.js): la extensión descarga de Printables y la app lo guarda
+    case 'descargas-trabajo':
+      return pedir('/descargas/trabajo');
+    case 'descargas': {
+      if (!RUTAS_DESCARGAS.includes(m.ruta)) throw new Error('Ruta de descargas desconocida: ' + m.ruta);
+      return pedir('/descargas/' + m.ruta, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(m.cuerpo),
+      });
+    }
+    case 'descargas-bajar': {
+      // Se baja aquí (no en la página) para que el archivo no tenga que pasar por los mensajes: la
+      // extensión puede leer de files/media.printables.com (host_permissions) y se lo manda a la app.
+      if (!ORIGENES_ARCHIVOS.some((o) => String(m.url).startsWith(o))) throw new Error('Dirección de descarga no válida');
+      let r;
+      try {
+        r = await fetch(m.url);
+      } catch (_) {
+        throw new Error('No se ha podido descargar ' + m.nombre + ' de Printables');
+      }
+      if (!r.ok) throw new Error('Printables responde ' + r.status + ' al descargar ' + m.nombre);
+      const datos = await r.arrayBuffer();
+      return pedir('/descargas/archivo?trabajo=' + encodeURIComponent(m.trabajo) + '&carpeta=' +
+        encodeURIComponent(m.carpeta) + '&nombre=' + encodeURIComponent(m.nombre), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: datos,
+      });
+    }
     default:
       throw new Error('Mensaje desconocido: ' + m.tipo);
   }
@@ -52,7 +86,8 @@ async function llamar(ruta, opciones) {
   if (!r.ok) {
     let detalle = '';
     try { detalle = (await r.json()).error || ''; } catch (_) { /* sin detalle */ }
-    throw new Error('JujaMaker responde ' + r.status + (detalle ? ': ' + detalle : ''));
+    // 409: lo que llega es de una descarga que ya no está en marcha (ver DescargasPrintables)
+    throw new Error((r.status === 409 ? 'PARAR: ' : '') + 'JujaMaker responde ' + r.status + (detalle ? ': ' + detalle : ''));
   }
   return r;
 }

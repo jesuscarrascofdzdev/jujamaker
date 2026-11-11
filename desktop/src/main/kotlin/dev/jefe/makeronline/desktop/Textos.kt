@@ -397,6 +397,41 @@ object Textos {
         "Instalarla (una vez): en Chrome abre chrome://extensions, activa \"Modo de desarrollador\", pulsa " +
             "\"Cargar descomprimida\" y elige la carpeta de la extensión. Esta app tiene que estar abierta mientras subes. " +
             "Si tu navegador por defecto no es Chrome, abre Printables en Chrome y pulsa \"Seguido\" en el panel."
+    // ------------------------------------------------------------ Descargar de Printables (extensión de Chrome)
+    const val PRD_TITULO = "Printables"
+    const val PRD_EXPLICACION =
+        "Printables no deja entrar al Chrome de la app, así que descarga la extensión de JujaMaker en tu Chrome " +
+            "de siempre (la misma que para subir). Al pulsar \"Descargar de Printables\" se abre Printables y la " +
+            "extensión baja los modelos nuevos de los usuarios marcados, igual que en las otras webs: los últimos de " +
+            "cada uno (los de arriba), solo los gratis, salta los que ya tienen tu like, les da like al terminar y " +
+            "deja todo en el mismo zip del escritorio. La app tiene que estar abierta mientras tanto."
+    const val PRD_CAMPO_AGREGAR = "Añadir un usuario: pega la dirección de su perfil"
+    const val PRD_AGREGAR_AYUDA =
+        "Por ejemplo https://www.printables.com/@VC_Design (o solo @VC_Design). Puedes poner un nombre delante: " +
+            "\"VC Design · https://www.printables.com/@VC_Design\"."
+    const val PRD_LISTA_VACIA = "Todavía no hay nadie en esta lista. Añade el primero arriba."
+    const val PRD_DESCARGAR = "Descargar de Printables"
+    const val PRD_REABRIR = "Volver a abrir Printables"
+    const val PRD_TAREA = "Descargando de Printables…"
+    const val PRD_ABIERTO =
+        "Abierto Printables en tu navegador: la extensión empieza sola (recuadro abajo a la izquierda)."
+    const val PRD_ESPERANDO =
+        "Esperando a la extensión… Si no arranca: abre Printables en Chrome con \"Volver a abrir Printables\", " +
+            "y comprueba en chrome://extensions que la extensión de JujaMaker está activada y actualizada (botón ↻)."
+    const val PRD_ERROR_MAXIMO = "Printables: el máximo de descargas tiene que ser un número de 1 en adelante (o vacío para sin límite)."
+    const val PRD_ERROR_LISTA_ROTA = "Printables: la lista de usuarios tiene un error (arréglala en usuarios-printables.json y pulsa Recargar)."
+    const val PRD_ERROR_LISTA_VACIA = "Printables: añade al menos un usuario a la lista."
+    const val PRD_ERROR_NINGUNO_MARCADO = "Printables: marca al menos un usuario."
+    fun prdUsuarioSinNombre(handle: String?) = if (handle == null) "(sin usuario)" else "@$handle"
+    fun prdResumen(r: dev.jefe.makeronline.DescargasPrintables.Resumen) = buildString {
+        append(if (r.simulado) "Se descargarían ${r.descargados}" else "Descargados ${r.descargados}")
+        if (r.soloLike > 0) append(" · ${r.soloLike} solo like")
+        if (r.yaTenianLike > 0) append(" · ${r.yaTenianLike} ya tenían like")
+        if (r.saltados > 0) append(" · ${r.saltados} saltados")
+        if (r.errores > 0) append(" · ${r.errores} con error")
+        if (r.parado) append(" · parado")
+    }
+
     // ------------------------------------------------------------ ventana Descripción
     const val AGREGAR_DESCRIPCION = "Agregar descripción"
     const val EDITAR_DESCRIPCION = "Editar descripción"

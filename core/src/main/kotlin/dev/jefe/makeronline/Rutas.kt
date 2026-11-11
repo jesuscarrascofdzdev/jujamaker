@@ -32,6 +32,12 @@ class Rutas @JvmOverloads constructor(
     /** Como [registro], pero de Creality Cloud: un id de modelo por línea. */
     val registroCreality: Path get() = datos.resolve("descargados-creality.txt")
 
+    /** Lista de usuarios de Printables de los que se descarga (con la extensión de Chrome). */
+    val usuariosPrintables: Path get() = datos.resolve("usuarios-printables.json")
+
+    /** Como [registro], pero de Printables: un id de modelo por línea. */
+    val registroPrintables: Path get() = datos.resolve("descargados-printables.txt")
+
     /** Ajustes de la app de escritorio que se recuerdan de una vez para otra. */
     val ajustes: Path get() = datos.resolve("ajustes.properties")
 

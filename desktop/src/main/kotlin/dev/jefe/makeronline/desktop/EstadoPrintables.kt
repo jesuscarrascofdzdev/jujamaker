@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.jefe.makeronline.AgenteException
 import dev.jefe.makeronline.ColaPrintables
+import dev.jefe.makeronline.DescargasPrintables
 import dev.jefe.makeronline.Rutas
 import dev.jefe.makeronline.ServidorPrintables
 import java.nio.file.Files
@@ -13,7 +14,8 @@ import java.nio.file.StandardCopyOption
 
 /**
  * La tarjeta de Printables de la pantalla Subir: la cola de modelos para la extensión de Chrome y el
- * servidor por el que la extensión los pide (ver ColaPrintables y ServidorPrintables en core).
+ * servidor por el que la extensión los pide (ver ColaPrintables y ServidorPrintables en core). El mismo
+ * servidor sirve para las descargas de Printables ([descargas], pantalla Descargar).
  *
  * A Printables no sube la app: Cloudflare no deja entrar a su Chrome (comprobado el 10/11/2026 con
  * DiagnosticoPrintables). Se
@@ -25,6 +27,8 @@ import java.nio.file.StandardCopyOption
  */
 class EstadoPrintables(private val rutas: Rutas) {
     private val cola = ColaPrintables(rutas)
+    /** Las descargas de Printables (pantalla Descargar): también las hace la extensión, por el mismo servidor. */
+    val descargas = DescargasPrintables(rutas)
     private var servidor: ServidorPrintables? = null
 
     /** Cuántas carpetas faltan por subir a Printables (de pendientes/ y de subidos/). */
@@ -54,7 +58,7 @@ class EstadoPrintables(private val rutas: Rutas) {
             error = "No he podido copiar la extensión a ${carpetaExtension}: ${e.message}"
         }
         try {
-            servidor = ServidorPrintables(cola) { clave, modelo ->
+            servidor = ServidorPrintables(cola, descargas) { clave, modelo ->
                 ultima = "${clave.substringAfter('/')} → modelo $modelo"
                 actualizar()
             }.also { it.arrancar() }
@@ -98,6 +102,6 @@ class EstadoPrintables(private val rutas: Rutas) {
 
     private companion object {
         const val CARPETA = "extension-printables"
-        val ARCHIVOS = listOf("manifest.json", "background.js", "panel.js", "pagina.js")
+        val ARCHIVOS = listOf("manifest.json", "background.js", "panel.js", "pagina.js", "descargas.js")
     }
 }
