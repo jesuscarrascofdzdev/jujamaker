@@ -23,11 +23,11 @@ import kotlin.io.path.name
  * La app descarga en descarga-en-curso/<usuario>/<título>_<id>/ (ver Rutas.descargaEnCurso).
  * Al terminar, haya ido bien, se haya parado o haya fallado:
  *  - los modelos completos (los que tienen info.json, que el Downloader escribe lo último) van a
- *    makeronline-<día-mes-año>.zip, con las mismas carpetas; si ya existe, "… (2).zip", "… (3).zip"…
+ *    descargas-<día-mes-año>.zip, con las mismas carpetas (las de Creality acaban en " (Creality)"); si ya existe, "… (2).zip", "… (3).zip"…
  *  - errores.txt y las capturas error_<id>.png se guardan en errores-descargas/<usuario>/,
  *    para poder verlos desde la app ("Ver detalle de errores");
  *  - descarga-en-curso se vacía. Lo que haya quedado a medias se vuelve a bajar la próxima vez,
- *    porque no se ha apuntado en descargados.txt.
+ *    porque no se ha apuntado en descargados.txt (ni en descargados-creality.txt).
  * Si el zip no se puede crear, no se borra nada: lo descargado irá en el zip de la próxima vez.
  */
 object ZipDescargas {
@@ -65,9 +65,9 @@ object ZipDescargas {
         return listOf("Desktop", "Escritorio").map(casa::resolve).firstOrNull { it.isDirectory() } ?: casa
     }
 
-    /** makeronline-31-10-2026.zip, o makeronline-31-10-2026 (2).zip si ya existe… */
+    /** descargas-31-10-2026.zip, o descargas-31-10-2026 (2).zip si ya existe… */
     fun nombreLibre(destino: Path, hoy: LocalDate): Path {
-        val base = "makeronline-" + hoy.format(FECHA)
+        val base = "descargas-" + hoy.format(FECHA)
         var n = 1
         while (true) {
             val nombre = if (n == 1) "$base.zip" else "$base ($n).zip"

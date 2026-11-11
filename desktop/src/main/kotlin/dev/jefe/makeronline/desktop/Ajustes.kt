@@ -73,11 +73,43 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
-    /** En Descargar, el máximo de descargas de cada vez; null = sin límite (por defecto). */
+    /** En Descargar, el máximo de descargas de MakerOnline de cada vez; null = sin límite (por defecto). */
     var maximoDescargas: Int?
         get() = valores.getProperty(MAXIMO_DESCARGAS)?.toIntOrNull()?.takeIf { it >= 1 }
         set(v) {
             if (v == null) valores.remove(MAXIMO_DESCARGAS) else valores.setProperty(MAXIMO_DESCARGAS, v.toString())
+            guardar()
+        }
+
+    /** En Descargar, si se descarga de MakerOnline (por defecto, sí). Solo cuenta si hay sesión. */
+    var descargarMakerOnline: Boolean
+        get() = valores.getProperty(DESCARGAR_MAKERONLINE)?.toBooleanStrictOrNull() ?: true
+        set(v) {
+            valores.setProperty(DESCARGAR_MAKERONLINE, v.toString())
+            guardar()
+        }
+
+    /** En Descargar, si se descarga de Creality Cloud (por defecto, sí). Solo cuenta si hay sesión. */
+    var descargarCreality: Boolean
+        get() = valores.getProperty(DESCARGAR_CREALITY)?.toBooleanStrictOrNull() ?: true
+        set(v) {
+            valores.setProperty(DESCARGAR_CREALITY, v.toString())
+            guardar()
+        }
+
+    /** En Descargar, el máximo de descargas de Creality de cada vez; null = sin límite (por defecto). */
+    var maximoCreality: Int?
+        get() = valores.getProperty(MAXIMO_CREALITY)?.toIntOrNull()?.takeIf { it >= 1 }
+        set(v) {
+            if (v == null) valores.remove(MAXIMO_CREALITY) else valores.setProperty(MAXIMO_CREALITY, v.toString())
+            guardar()
+        }
+
+    /** Los usuarios de Creality desmarcados en Descargar, por su número de usuario. */
+    var desmarcadosCreality: Set<Long>
+        get() = valores.getProperty(DESMARCADOS_CREALITY)?.split(',')?.mapNotNull { it.trim().toLongOrNull() }?.toSet() ?: emptySet()
+        set(v) {
+            if (v.isEmpty()) valores.remove(DESMARCADOS_CREALITY) else valores.setProperty(DESMARCADOS_CREALITY, v.sorted().joinToString(","))
             guardar()
         }
 
@@ -125,6 +157,10 @@ class Ajustes(private val archivo: Path) {
         const val SUBIR_CREALITY = "subirCreality"
         const val ULTIMOS_MODELOS = "ultimosModelos"
         const val MAXIMO_DESCARGAS = "maximoDescargas"
+        const val DESCARGAR_MAKERONLINE = "descargarMakerOnline"
+        const val DESCARGAR_CREALITY = "descargarCreality"
+        const val MAXIMO_CREALITY = "maximoCreality"
+        const val DESMARCADOS_CREALITY = "usuariosCrealityDesmarcados"
         const val VENTANA_MAXIMIZADA = "ventanaMaximizada"
         const val VENTANA_ANCHO = "ventanaAncho"
         const val VENTANA_ALTO = "ventanaAlto"
