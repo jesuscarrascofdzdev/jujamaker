@@ -89,6 +89,13 @@ solo se comprobaba que no *faltaran* archivos, no que no *sobraran*. Ahora:
 - No se ha podido reproducir el fallo original: si vuelve a pasar, el panel dirá ahora cuántos archivos había.
   Se miró si Printables guarda el formulario a medias (localStorage, sessionStorage, IndexedDB): no guarda nada.
 
+## Qué carpetas entran en la cola (11/11/2026)
+
+Solo las que la persona mete en la app: las de `pendientes/` y, de `subidos/`, las que pasaron antes por
+`pendientes/` (se apuntan en `printables-vistas.txt` en la carpeta de datos). Las que ya estaban en `subidos/`
+de antes (subidas a MakerOnline hace tiempo) no entran. La primera vez, sin ese archivo, también cuentan las de
+`subidos/` cuyo `resultado.png` es del 10/11/2026 en adelante. Para meter una antigua: muévela a `pendientes/`.
+
 ## Descargar de Printables (11/11/2026)
 
 Misma lógica que MakerOnline y Creality (últimos N gratis de cada usuario, saltar los que tienen tu like, like al
