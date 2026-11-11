@@ -13,6 +13,7 @@ import dev.jefe.makeronline.ModelMeta
 import dev.jefe.makeronline.Rutas
 import dev.jefe.makeronline.SubidaMultiple
 import dev.jefe.makeronline.SubidorCreality
+import dev.jefe.makeronline.SubidorNexprint
 import dev.jefe.makeronline.TextosCarpeta
 import dev.jefe.makeronline.Web
 import kotlinx.coroutines.Dispatchers
@@ -44,6 +45,10 @@ data class CarpetaPendiente(
     val errorCreality: Path? = null,
     /** Si tiene un .3mf (a Creality solo se sube con .3mf). */
     val con3mf: Boolean = false,
+    /** Si ya se ha subido a Nexprint (tiene subido-nexprint.txt): no se vuelve a subir allí. */
+    val enNexprint: Boolean = false,
+    /** El error-nexprint.txt del último intento fallido de subirla a Nexprint, o null si no hay. */
+    val errorNexprint: Path? = null,
 ) {
     val valida: Boolean get() = problemas.isEmpty()
 }
@@ -68,8 +73,8 @@ data class Insignia(val web: Web, val estado: EstadoEnWeb, val archivo: Path? = 
 /**
  * Lo que enseña la pantalla Subir y lo que hacen sus botones.
  *
- * Se sube a las webs marcadas que tienen sesión (ver [sube]): MakerOnline como borrador y Creality
- * Cloud como privado (ver SubidaMultiple en core).
+ * Se sube a las webs marcadas que tienen sesión (ver [sube]): MakerOnline y Nexprint como borrador
+ * y Creality Cloud como privado (ver SubidaMultiple en core).
  *
  * Todo se cambia desde el hilo de la ventana: las funciones `suspend` vuelven a él al terminar,
  * y los avisos de core llegan a él a través de [ProgresoApp].
@@ -120,10 +125,13 @@ class EstadoSubida(
         private set
     var marcadaCreality by mutableStateOf(ajustes.subirCreality)
         private set
+    var marcadaNexprint by mutableStateOf(ajustes.subirNexprint)
+        private set
 
     fun marcada(web: Web): Boolean = when (web) {
         Web.MAKERONLINE -> marcadaMakerOnline
         Web.CREALITY -> marcadaCreality
+        Web.NEXPRINT -> marcadaNexprint
     }
 
     fun marcar(web: Web, si: Boolean) {
@@ -135,6 +143,10 @@ class EstadoSubida(
             Web.CREALITY -> {
                 marcadaCreality = si
                 ajustes.subirCreality = si
+            }
+            Web.NEXPRINT -> {
+                marcadaNexprint = si
+                ajustes.subirNexprint = si
             }
         }
     }
@@ -162,10 +174,11 @@ class EstadoSubida(
     fun websQueSuben(): List<Web> = Web.entries.filter { sube(it) }
 
     /**
-     * Las insignias de una carpeta, en el orden en que se sube (primero Creality):
-     *  - Creality: si ya está o si falló, siempre (es lo que ha pasado); si no, solo si se va a subir allí.
+     * Las insignias de una carpeta, en el orden en que se sube (Creality, Nexprint y MakerOnline):
+     *  - Creality y Nexprint: si ya está o si falló, siempre (es lo que ha pasado); si no, solo si se
+     *    va a subir allí.
      *  - MakerOnline: solo si se va a subir allí. En pendientes nunca está ya (al subirla, el Uploader
-     *    la mueve); si antes tiene que ir a Creality, "espera a Creality".
+     *    la mueve); si antes tiene que ir a otra web, "espera a las demás".
      * Las carpetas con problemas solo enseñan lo que ya ha pasado.
      */
     fun insignias(c: CarpetaPendiente): List<Insignia> {
@@ -176,12 +189,19 @@ class EstadoSubida(
             !c.con3mf -> Insignia(Web.CREALITY, EstadoEnWeb.SIN_3MF)
             else -> Insignia(Web.CREALITY, EstadoEnWeb.FALTA)
         }
+        val nexprint = when {
+            c.enNexprint -> Insignia(Web.NEXPRINT, EstadoEnWeb.SUBIDO)
+            c.errorNexprint != null -> Insignia(Web.NEXPRINT, EstadoEnWeb.ERROR, c.errorNexprint)
+            !c.valida || !sube(Web.NEXPRINT) -> null
+            else -> Insignia(Web.NEXPRINT, EstadoEnWeb.FALTA)
+        }
         val makerOnline = when {
             !c.valida || !sube(Web.MAKERONLINE) -> null
             sube(Web.CREALITY) && c.con3mf && !c.enCreality -> Insignia(Web.MAKERONLINE, EstadoEnWeb.ESPERA)
+            sube(Web.NEXPRINT) && !c.enNexprint -> Insignia(Web.MAKERONLINE, EstadoEnWeb.ESPERA)
             else -> Insignia(Web.MAKERONLINE, EstadoEnWeb.FALTA)
         }
-        return listOfNotNull(creality, makerOnline)
+        return listOfNotNull(creality, nexprint, makerOnline)
     }
 
     /** Vuelve a coger lo que se recuerda (después de traer los datos de antes). */
@@ -189,6 +209,7 @@ class EstadoSubida(
         verChrome = ajustes.verChromeAlSubir
         marcadaMakerOnline = ajustes.subirMakerOnline
         marcadaCreality = ajustes.subirCreality
+        marcadaNexprint = ajustes.subirNexprint
     }
 
     // ------------------------------------------------------------ ejecución
@@ -246,6 +267,8 @@ class EstadoSubida(
         }
         val enCreality = SubidorCreality.yaSubido(dir)
         val errorCreality = dir.resolve(SubidorCreality.ERROR_TXT).takeIf { !enCreality && Files.isRegularFile(it) }
+        val enNexprint = SubidorNexprint.yaSubido(dir)
+        val errorNexprint = dir.resolve(SubidorNexprint.ERROR_TXT).takeIf { !enNexprint && Files.isRegularFile(it) }
         val con3mf = try {
             ModelFolder.modelosDe(dir).any { it.fileName.toString().lowercase(Locale.ROOT).endsWith(".3mf") }
         } catch (_: Exception) {
@@ -256,13 +279,16 @@ class EstadoSubida(
             val meta = m.meta()
             val detalle = meta.title() + " · " + meta.categoryOrDefault().joinToString(" - ") +
                 (if (meta.sinCategoria()) Textos.POR_DEFECTO else "")
-            CarpetaPendiente(nombre, dir, emptyList(), m.avisos(), detalle, portada, enCreality, errorCreality, con3mf)
+            CarpetaPendiente(nombre, dir, emptyList(), m.avisos(), detalle, portada, enCreality, errorCreality, con3mf,
+                enNexprint, errorNexprint)
         } catch (e: IllegalStateException) {
             CarpetaPendiente(nombre, dir, (e.message ?: e.toString()).lines().filter { it.isNotBlank() },
-                portada = portada, enCreality = enCreality, errorCreality = errorCreality, con3mf = con3mf)
+                portada = portada, enCreality = enCreality, errorCreality = errorCreality, con3mf = con3mf,
+                enNexprint = enNexprint, errorNexprint = errorNexprint)
         } catch (e: IOException) {
             CarpetaPendiente(nombre, dir, listOf(Textos.errorInesperado(e)),
-                portada = portada, enCreality = enCreality, errorCreality = errorCreality, con3mf = con3mf)
+                portada = portada, enCreality = enCreality, errorCreality = errorCreality, con3mf = con3mf,
+                enNexprint = enNexprint, errorNexprint = errorNexprint)
         }
     }
 
@@ -486,6 +512,7 @@ class EstadoSubida(
             revisar = revisar,
             carpetas = nombres,
             verChrome = verChrome,
+            nexprint = sube(Web.NEXPRINT),
         )
         try {
             resumen = hilo.ejecutar {

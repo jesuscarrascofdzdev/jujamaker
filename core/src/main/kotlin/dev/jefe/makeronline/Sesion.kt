@@ -8,10 +8,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Las sesiones de MakerOnline y de Creality Cloud guardadas en el perfil de Chrome (chrome-profile/).
+ * Las sesiones de MakerOnline, Creality Cloud y Nexprint guardadas en el perfil de Chrome (chrome-profile/).
  *
  * - [comprobar] mira si Chrome está instalado, si la sesión de MakerOnline sirve y si hay sesión de
- *   Creality Cloud guardada.
+ *   Creality Cloud y de Nexprint guardada.
  * - [abrirParaIniciar] abre Chrome en una de las webs para que la persona inicie sesión.
  * - [buscarUsuario] busca en MakerOnline a alguien para añadirlo a la lista de usuarios.
  *
@@ -30,6 +30,7 @@ class Sesion(private val rutas: Rutas) {
      * @property motivo          por qué no hay sesión, para enseñárselo a la persona
      * @property creality        si hay sesión de Creality Cloud guardada en Chrome (su cookie; se
      *                           comprueba de verdad al subir, en la propia página)
+     * @property nexprint        si hay sesión de Nexprint guardada en Chrome (su cookie, como Creality)
      */
     data class Estado(
         val chromeInstalado: Boolean,
@@ -37,6 +38,7 @@ class Sesion(private val rutas: Rutas) {
         val nombre: String? = null,
         val motivo: String? = null,
         val creality: Boolean = false,
+        val nexprint: Boolean = false,
     )
 
     /**
@@ -66,8 +68,8 @@ class Sesion(private val rutas: Rutas) {
 
     /**
      * Comprueba Chrome y las sesiones. Abre Chrome sin ventana unos segundos para leer las cookies
-     * del perfil y preguntar a MakerOnline si su sesión sigue valiendo. De Creality solo se mira si
-     * está su cookie (no se abre su web): si hubiera caducado, se avisa al subir.
+     * del perfil y preguntar a MakerOnline si su sesión sigue valiendo. De Creality y de Nexprint solo
+     * se mira si está su cookie (no se abre su web): si hubiera caducado, se avisa al subir.
      *
      * @throws AgenteException si otro programa está usando Chrome (candado ocupado)
      */
@@ -80,9 +82,11 @@ class Sesion(private val rutas: Rutas) {
             Browsers.playwright().use { pw ->
                 Browsers.openChrome(pw, rutas.perfilChrome, 0.0, true, false).use { ctx ->
                     val creality = tokenCreality(ctx) != null
+                    val nexprint = ctx.cookies(SubidorNexprint.WEB)
+                        .any { it.name == SubidorNexprint.COOKIE_SESION && !it.value.isNullOrBlank() }
                     val token = token(ctx)
                         ?: return Estado(chromeInstalado = true, iniciada = false, motivo = "no hay sesión iniciada",
-                            creality = creality)
+                            creality = creality, nexprint = nexprint)
                     // Mismo endpoint que usa la web al cargar tu perfil (comprobado el 31/10/2026)
                     val r = ctx.request().get(
                         "$WEB/api/user/personal/info",
@@ -90,7 +94,7 @@ class Sesion(private val rutas: Rutas) {
                             .setHeader("Authorization", token)
                             .setHeader("Accept", "application/json"),
                     )
-                    return interpretar(r.status(), r.text()).copy(creality = creality)
+                    return interpretar(r.status(), r.text()).copy(creality = creality, nexprint = nexprint)
                 }
             }
         }

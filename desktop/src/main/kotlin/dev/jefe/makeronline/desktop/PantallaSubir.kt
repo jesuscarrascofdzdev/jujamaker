@@ -586,6 +586,7 @@ private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
     val r = s.resumen ?: return
     val pequeno = MaterialTheme.typography.bodySmall
     val creality = r.creality
+    val nexprint = r.nexprint
     val makerOnline = r.makerOnline
     val conError = makerOnline?.carpetasConError().orEmpty()
     Tarjeta(espacio = 10.dp) {
@@ -602,6 +603,14 @@ private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
                     ((creality?.sinSubir ?: 0) + r.sin3mf.size).toString(),
                 )
             }
+            if (nexprint != null) {
+                FilaTabla(
+                    Web.NEXPRINT.nombre,
+                    nexprint.subidos.toString(),
+                    nexprint.conError.toString(),
+                    nexprint.sinSubir.toString(),
+                )
+            }
             if (makerOnline != null || r.sinMakerOnline.isNotEmpty()) {
                 FilaTabla(
                     Web.MAKERONLINE.nombre,
@@ -614,6 +623,9 @@ private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
         if (creality != null && creality.yaSubidos > 0) {
             Text(Textos.yaEstabanEnCreality(creality.yaSubidos), style = pequeno, color = Colores.textoSuave)
         }
+        if (nexprint != null && nexprint.yaSubidos > 0) {
+            Text(Textos.yaEstabanEn(Web.NEXPRINT, nexprint.yaSubidos), style = pequeno, color = Colores.textoSuave)
+        }
         if (r.sin3mf.isNotEmpty()) Text(Textos.sinCrealityPorStl(r.sin3mf), style = pequeno, color = Colores.ambarTexto)
         if (r.sinMakerOnline.isNotEmpty()) Text(Textos.sinMakerOnline(r.sinMakerOnline), style = pequeno, color = Colores.ambarTexto)
         if (r.aSubidos > 0) Text(Textos.pasanASubidos(r.aSubidos), style = pequeno, color = Colores.textoClaro)
@@ -621,7 +633,7 @@ private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
             if ((makerOnline?.subidos() ?: 0) > 0 || r.aSubidos > 0) BotonEnlace(Textos.ABRIR_SUBIDOS, { abrir(rutas.subidos) })
             if (conError.isNotEmpty()) BotonEnlace(Textos.ABRIR_ERRORES, { abrir(rutas.errores) })
         }
-        if ((creality?.conError ?: 0) > 0) Text(Textos.ERRORES_CREALITY_EN_LISTA, style = pequeno, color = Colores.textoSuave)
+        if ((creality?.conError ?: 0) + (nexprint?.conError ?: 0) > 0) Text(Textos.ERRORES_CREALITY_EN_LISTA, style = pequeno, color = Colores.textoSuave)
         for (carpeta in conError) {
             // La captura si la hay (falló al subir); si no, el error.txt (no era válida)
             val captura = carpeta.resolve("error.png")

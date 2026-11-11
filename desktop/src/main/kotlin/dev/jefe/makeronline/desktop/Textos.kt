@@ -47,6 +47,7 @@ object Textos {
     fun comoSube(web: Web) = when (web) {
         Web.MAKERONLINE -> "Sube como borrador"
         Web.CREALITY -> "Sube como privado · solo carpetas con .3mf"
+        Web.NEXPRINT -> "Sube como borrador"
     }
     const val CREALITY_NOTA = "Si la sesión caduca, la app te avisará al subir."
     const val INICIAR_SESION = "Iniciar sesión"
@@ -60,9 +61,14 @@ object Textos {
         "Se ha abierto Chrome en Creality Cloud. Pulsa el botón para iniciar sesión (arriba a la derecha) y " +
             "entra con tu cuenta. No inicies sesión en el propio Chrome (el botón de perfil de arriba a la " +
             "derecha), solo en la web. Cuando veas tu avatar en Creality Cloud, vuelve aquí."
+    const val INSTRUCCIONES_LOGIN_NEXPRINT =
+        "Se ha abierto Chrome en Nexprint. Pulsa \"Log In\" (arriba a la derecha) y entra con tu cuenta de ELEGOO, " +
+            "mejor con email y contraseña (con Google puede que no te deje). Si sale un captcha, resuélvelo tú. " +
+            "No inicies sesión en el propio Chrome, solo en la web. Cuando veas tu avatar en Nexprint, vuelve aquí."
     fun instruccionesLogin(web: Web) = when (web) {
         Web.MAKERONLINE -> INSTRUCCIONES_LOGIN
         Web.CREALITY -> INSTRUCCIONES_LOGIN_CREALITY
+        Web.NEXPRINT -> INSTRUCCIONES_LOGIN_NEXPRINT
     }
     const val YA_HE_ENTRADO = "Ya he entrado"
     const val CANCELAR = "Cancelar"
@@ -174,6 +180,7 @@ object Textos {
     fun notaResumen(web: Web, saltados: Int): String? = if (saltados == 0) null else when (web) {
         Web.MAKERONLINE -> null
         Web.CREALITY -> "Creality: $saltados no se bajan (de pago o sin perfil .3mf)."
+        Web.NEXPRINT -> null // de Nexprint no se descarga
     }
     fun usuariosTitulo(n: Int) = "Usuarios ($n)"
     const val RECARGAR = "Recargar"
@@ -311,6 +318,7 @@ object Textos {
     fun fichaWeb(web: Web) = when (web) {
         Web.MAKERONLINE -> "Borrador"
         Web.CREALITY -> "Privado · solo .3mf"
+        Web.NEXPRINT -> "Borrador"
     }
     const val INICIAR_SESION_FLECHA = "Iniciar sesión →"
     const val IR_A_SESION = "Ir a Sesión →"
@@ -319,6 +327,7 @@ object Textos {
         0 -> SUBIR
         1 -> "Subir a " + webs[0].nombre
         2 -> "Subir a las dos"
+        3 -> "Subir a las tres"
         else -> "Subir a las ${webs.size}"
     }
     const val QUE_CARPETAS = "Qué carpetas"
@@ -345,17 +354,18 @@ object Textos {
     const val TABLA_SUBIDOS = "Subidos"
     const val TABLA_CON_ERROR = "Con error"
     const val TABLA_SIN_SUBIR = "Sin subir"
-    fun yaEstabanEnCreality(n: Int) =
-        if (n == 1) "1 ya estaba en Creality Cloud." else "$n ya estaban en Creality Cloud."
+    fun yaEstabanEnCreality(n: Int) = yaEstabanEn(Web.CREALITY, n)
+    fun yaEstabanEn(web: Web, n: Int) =
+        if (n == 1) "1 ya estaba en ${web.nombre}." else "$n ya estaban en ${web.nombre}."
     fun sinCrealityPorStl(nombres: List<String>) =
         "No van a Creality Cloud porque solo tienen .stl: " + nombres.joinToString(", ")
     fun sinMakerOnline(nombres: List<String>) =
-        "No han ido a MakerOnline porque antes tienen que estar en Creality Cloud (siguen en pendientes): " +
+        "No han ido a MakerOnline porque antes tienen que estar en las demás webs elegidas (siguen en pendientes): " +
             nombres.joinToString(", ")
     fun pasanASubidos(n: Int) =
-        if (n == 1) "1 carpeta pasa a subidos (ya está en Creality Cloud)." else "$n carpetas pasan a subidos (ya están en Creality Cloud)."
+        if (n == 1) "1 carpeta pasa a subidos (ya está en todas las webs elegidas)." else "$n carpetas pasan a subidos (ya están en todas las webs elegidas)."
     const val ERRORES_CREALITY_EN_LISTA =
-        "Las que han fallado en Creality siguen en pendientes: en la lista tienen el enlace a su error."
+        "Las que han fallado en Creality o en Nexprint siguen en pendientes: en la lista tienen el enlace a su error."
     const val ABRIR_SUBIDOS = "Abrir subidos"
     const val ABRIR_ERRORES = "Abrir errores"
     fun verError(carpeta: String) = "Ver el error de $carpeta"
@@ -363,13 +373,14 @@ object Textos {
     fun webCorta(web: Web) = when (web) {
         Web.MAKERONLINE -> "MakerOnline"
         Web.CREALITY -> "Creality"
+        Web.NEXPRINT -> "Nexprint"
     }
     /** Las insignias de cada carpeta: "Creality · subido", "MakerOnline · espera a Creality"… */
     fun insignia(web: Web, estado: EstadoEnWeb) = webCorta(web) + " · " + when (estado) {
         EstadoEnWeb.SUBIDO -> "subido"
         EstadoEnWeb.ERROR -> "error · ver"
         EstadoEnWeb.FALTA -> "falta"
-        EstadoEnWeb.ESPERA -> "espera a Creality"
+        EstadoEnWeb.ESPERA -> "espera a las demás"
         EstadoEnWeb.SIN_3MF -> "no va (solo .stl)"
     }
     const val COMO_CARPETA = "¿Cómo tiene que ser una carpeta?"

@@ -51,6 +51,7 @@ class EstadoDescargas(
     fun marcada(web: Web): Boolean = when (web) {
         Web.MAKERONLINE -> marcadaMakerOnline
         Web.CREALITY -> marcadaCreality
+        Web.NEXPRINT -> false // de Nexprint no se descarga (Web.descarga)
     }
 
     fun marcar(web: Web, si: Boolean) {
@@ -63,6 +64,7 @@ class EstadoDescargas(
                 marcadaCreality = si
                 ajustes.descargarCreality = si
             }
+            Web.NEXPRINT -> Unit
         }
     }
 
@@ -73,7 +75,7 @@ class EstadoDescargas(
     fun descarga(web: Web): Boolean = marcada(web) && disponible(web)
 
     /** Las webs de las que se va a descargar, en el orden de la pantalla. */
-    fun websQueDescargan(): List<Web> = Web.entries.filter { descarga(it) }
+    fun websQueDescargan(): List<Web> = Web.entries.filter { it.descarga && descarga(it) }
 
     val sesionComprobada: Boolean get() = sesion.estado != null
     val comprobandoSesion: Boolean get() = ocupacion.tarea == Textos.TAREA_COMPROBANDO
@@ -92,12 +94,14 @@ class EstadoDescargas(
     fun marcadosEn(web: Web): Int = when (web) {
         Web.MAKERONLINE -> makerOnline.marcadosConCreador
         Web.CREALITY -> creality.marcados
+        Web.NEXPRINT -> 0
     }
 
     /** Cuántos usuarios hay en la lista de una web (en MakerOnline, contando al creador). */
     fun usuariosEn(web: Web): Int = when (web) {
         Web.MAKERONLINE -> makerOnline.usuarios.size + 1
         Web.CREALITY -> creality.usuarios.size
+        Web.NEXPRINT -> 0
     }
 
     // ------------------------------------------------------------ opciones comunes
@@ -142,6 +146,7 @@ class EstadoDescargas(
             val problema = when (web) {
                 Web.MAKERONLINE -> makerOnline.problema()
                 Web.CREALITY -> creality.problema()
+                Web.NEXPRINT -> null
             }
             if (problema != null) {
                 pestana = web // para que se vea la lista que tiene el problema
@@ -242,6 +247,7 @@ class EstadoDescargas(
     private fun mismoUsuario(web: Web, a: String, b: String): Boolean = when (web) {
         Web.MAKERONLINE -> a == b
         Web.CREALITY -> a == b || (ListaUsuariosCreality.idDe(a) != null && ListaUsuariosCreality.idDe(a) == ListaUsuariosCreality.idDe(b))
+        Web.NEXPRINT -> a == b
     }
 
     /** Para poder parar. Se pide desde la ventana y lo mira core en el hilo del navegador. */
@@ -308,6 +314,7 @@ class EstadoDescargas(
                             if (res.parado) c.pedir()
                             ResultadoWeb(web, res.descargados, res.soloLike, res.yaTenianLike, res.errores, res.saltados)
                         }
+                        Web.NEXPRINT -> ResultadoWeb(web) // no se llega: de Nexprint no se descarga
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -414,6 +421,7 @@ class EstadoDescargas(
                     }
                     Web.CREALITY -> ListaUsuariosCreality.nombreDe(e.nombre)
                         ?: Textos.crealityUsuarioSinNombre(ListaUsuariosCreality.idDe(e.nombre))
+                    Web.NEXPRINT -> e.nombre
                 }
                 usuarioActual = "${e.indice}/${e.total} · $nombre"
                 usuarioEnCurso?.let { if (it != e.nombre) hechos.add(web to it) }

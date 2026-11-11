@@ -83,6 +83,7 @@ object Iconos {
     fun de(web: Web): ImageVector = when (web) {
         Web.MAKERONLINE -> cubo
         Web.CREALITY -> nube
+        Web.NEXPRINT -> globo
     }
 
     /** Dos eslabones (Conectar con Claude). */

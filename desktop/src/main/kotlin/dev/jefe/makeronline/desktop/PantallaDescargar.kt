@@ -124,7 +124,7 @@ private fun PanelPaginas(d: EstadoDescargas, irASesion: () -> Unit) {
             Text(Textos.PAGINAS_AYUDA, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
         }
         Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            for (web in Web.entries) FichaPagina(d, web, !d.enMarcha, irASesion, Modifier.width(230.dp).fillMaxHeight())
+            for (web in Web.entries.filter { it.descarga }) FichaPagina(d, web, !d.enMarcha, irASesion, Modifier.width(230.dp).fillMaxHeight())
         }
     }
 }
@@ -209,7 +209,7 @@ private fun PanelUsuarios(d: EstadoDescargas, e: EstadoEdicion) {
                 .padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            for (web in Web.entries) {
+            for (web in Web.entries.filter { it.descarga }) {
                 val activa = web == d.pestana
                 val apagada = !d.descarga(web) // no se va a descargar de ella ahora
                 val color = when {
@@ -244,6 +244,7 @@ private fun PanelUsuarios(d: EstadoDescargas, e: EstadoEdicion) {
         when (d.pestana) {
             Web.MAKERONLINE -> UsuariosMakerOnline(d, e)
             Web.CREALITY -> UsuariosCreality(d)
+            Web.NEXPRINT -> Unit // de Nexprint no se descarga: no tiene pestaña
         }
     }
 }
@@ -399,6 +400,7 @@ private fun PanelOpciones(d: EstadoDescargas) {
                     Text(Textos.CREALITY_QUE_BAJA, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
                     CampoMaximo(d.creality.maximo, editable) { d.creality.cambiarMaximo(it) }
                 }
+                Web.NEXPRINT -> Unit
             }
         }
 

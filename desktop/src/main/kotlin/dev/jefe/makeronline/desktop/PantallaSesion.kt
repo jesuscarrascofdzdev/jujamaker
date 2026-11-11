@@ -138,7 +138,7 @@ private fun FilaWeb(s: EstadoSesion, web: Web, alcance: CoroutineScope) {
                 val nota = when {
                     e == null -> null
                     web == Web.MAKERONLINE && !iniciada -> e.motivo?.replaceFirstChar { it.uppercase() }
-                    web == Web.CREALITY && iniciada -> Textos.CREALITY_NOTA
+                    web != Web.MAKERONLINE && iniciada -> Textos.CREALITY_NOTA
                     else -> null
                 }
                 nota?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave) }

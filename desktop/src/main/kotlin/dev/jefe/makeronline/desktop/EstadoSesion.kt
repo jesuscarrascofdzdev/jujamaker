@@ -58,16 +58,20 @@ class EstadoSesion(
     /** Si hay sesión de Creality Cloud guardada en Chrome. */
     val creality: Boolean get() = estado?.creality == true
 
+    /** Si hay sesión de Nexprint guardada en Chrome (como Creality: su cookie). */
+    val nexprint: Boolean get() = estado?.nexprint == true
+
     /** Si hay sesión en esa web. */
     fun iniciada(web: Web): Boolean = when (web) {
         Web.MAKERONLINE -> makerOnline
         Web.CREALITY -> creality
+        Web.NEXPRINT -> nexprint
     }
 
     /** El nombre de la cuenta en esa web, si se sabe (de Creality solo se mira que haya sesión). */
     fun cuenta(web: Web): String? = when (web) {
         Web.MAKERONLINE -> estado?.nombre
-        Web.CREALITY -> null
+        Web.CREALITY, Web.NEXPRINT -> null
     }
 
     /** Si se pueden pulsar los botones: Chrome no está haciendo otra cosa (por ejemplo, descargar). */

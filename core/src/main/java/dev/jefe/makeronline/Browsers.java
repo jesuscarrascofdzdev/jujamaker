@@ -52,6 +52,9 @@ public final class Browsers {
                                             boolean headless, boolean fueraDePantalla) {
         List<String> args = new ArrayList<>(List.of("--disable-blink-features=AutomationControlled"));
         if (fueraDePantalla && !headless) args.add("--window-position=-10000,-10000");
+        // Chrome recuerda en el perfil dónde estaba la ventana al cerrarse: si la última vez estuvo
+        // fuera de la pantalla, volvería a abrirse ahí aunque ahora tenga que verse. Se coloca a la vista.
+        if (!fueraDePantalla && !headless) args.add("--window-position=80,40");
 
         BrowserType.LaunchPersistentContextOptions opts = new BrowserType.LaunchPersistentContextOptions()
                 .setChannel("chrome")          // usa Google Chrome instalado
