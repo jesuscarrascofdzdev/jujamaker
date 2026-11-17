@@ -33,6 +33,10 @@ class EstadoApp(val rutas: Rutas) {
     )
     /** La ventana de añadir y quitar usuarios (botón "Editar" de Descargar). */
     val edicion = EstadoEdicion(rutas, hilo, ocupacion, descargas.makerOnline)
+    /** La cola de Printables para la extensión de Chrome (pantalla Subir). Arranca su servidor ya. */
+    val printables = EstadoPrintables(rutas).also { it.arrancar() }
+    /** Descargar de Printables (pantalla Descargar): lo hace la extensión, por el servidor de [printables]. */
+    val descargasPrintables = EstadoDescargaPrintables(rutas, ajustes, ocupacion, printables).also { it.cargarLista() }
     /** La tarjeta "Conectar con Claude" (pantalla Sesión). */
     val claude = EstadoClaude()
     /** Traer los datos de antes (pantalla Sesión). Después, todo se vuelve a leer. */
@@ -41,6 +45,8 @@ class EstadoApp(val rutas: Rutas) {
         descargas.cargarAjustes()
         subida.cargarAjustes()
         descargas.cargarListas()
+        descargasPrintables.cargarAjustes()
+        descargasPrintables.cargarLista()
         subida.cargar()
         if (sesionTraida) sesion.comprobar()
     }
@@ -51,7 +57,9 @@ class EstadoApp(val rutas: Rutas) {
     fun cerrar() {
         subida.alCerrarApp()
         descargas.alCerrarApp()
+        descargasPrintables.alCerrarApp()
         sesion.alCerrarApp()
+        printables.cerrar()
         hilo.close()
     }
 

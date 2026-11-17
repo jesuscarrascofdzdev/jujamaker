@@ -1,5 +1,6 @@
 package dev.jefe.makeronline.desktop
 
+import dev.jefe.makeronline.Destino
 import dev.jefe.makeronline.Web
 
 /**
@@ -275,14 +276,14 @@ object Textos {
     // ------------------------------------------------------------ subir
     const val SUBIR_TITULO = "Subir"
     const val SUBIR_EXPLICACION =
-        "Sube cada carpeta de pendientes (un modelo con su .3mf o .stl, una imagen y la descripción) a las webs " +
-            "que marques: a MakerOnline como borrador y a Creality Cloud como privado."
+        "Sube cada carpeta de pendientes (un modelo con su .3mf o .stl, una imagen y la descripción) a las páginas " +
+            "que marques, con un solo botón: MakerOnline como borrador, Creality Cloud como privado, Makeroad como " +
+            "público y Printables como borrador con la extensión en tu Chrome."
     const val FORMATO_CARPETAS =
         "Los nombres de los archivos dan igual. La portada es la imagen que se llama portada, cover o como la " +
             "carpeta; si no, la primera. Los textos van en un .json o un .txt. A Creality Cloud solo se sube con " +
-            ".3mf. Cuando una carpeta está en todas las webs marcadas pasa a subidos/; si falla MakerOnline, a " +
-            "errores/ (con una captura). Si falla Creality, se queda en pendientes con error-creality.txt y la " +
-            "próxima vez solo se repite lo que falta."
+            ".3mf. Una carpeta pasa a subidos/ solo cuando está en todas las páginas marcadas al subirla. Si falla " +
+            "alguna, se queda en pendientes con su error (insignia roja) y la próxima vez solo se repite lo que falta."
     fun pendientesTitulo(n: Int) = "Pendientes ($n)"
     const val ABRIR_PENDIENTES = "Abrir la carpeta"
     const val VER_ERRORES_SUBIDA = "Ver errores"
@@ -308,18 +309,20 @@ object Textos {
     const val SUBIR_AHORA = "Subir ahora"
     const val DONDE_SUBIR = "Dónde (pulsa para marcar o desmarcar)"
     /** En la ficha de cada web, debajo de su nombre. */
-    fun fichaWeb(web: Web) = when (web) {
-        Web.MAKERONLINE -> "Borrador"
-        Web.CREALITY -> "Privado · solo .3mf"
+    fun fichaWeb(d: Destino) = when (d) {
+        Destino.MAKERONLINE -> "Borrador"
+        Destino.CREALITY -> "Privado · solo .3mf"
+        Destino.PRINTABLES -> "Borrador · con la extensión"
+        Destino.MAKEROAD -> "Público (lo revisan)"
     }
     const val INICIAR_SESION_FLECHA = "Iniciar sesión →"
     const val IR_A_SESION = "Ir a Sesión →"
     /** El botón Subir dice adónde: "Subir a MakerOnline", "Subir a las dos"… */
-    fun botonSubir(webs: List<Web>) = when (webs.size) {
+    fun botonSubir(destinos: List<Destino>) = when (destinos.size) {
         0 -> SUBIR
-        1 -> "Subir a " + webs[0].nombre
+        1 -> "Subir a " + destinos[0].nombre
         2 -> "Subir a las dos"
-        else -> "Subir a las ${webs.size}"
+        else -> "Subir a las ${destinos.size}"
     }
     const val QUE_CARPETAS = "Qué carpetas"
     const val POR_DEFECTO = " (por defecto)"
@@ -349,30 +352,104 @@ object Textos {
         if (n == 1) "1 ya estaba en Creality Cloud." else "$n ya estaban en Creality Cloud."
     fun sinCrealityPorStl(nombres: List<String>) =
         "No van a Creality Cloud porque solo tienen .stl: " + nombres.joinToString(", ")
-    fun sinMakerOnline(nombres: List<String>) =
-        "No han ido a MakerOnline porque antes tienen que estar en Creality Cloud (siguen en pendientes): " +
-            nombres.joinToString(", ")
+    fun yaEstaban(n: Int, pagina: String) =
+        if (n == 1) "1 ya estaba en $pagina." else "$n ya estaban en $pagina."
+    fun paraPrintables(n: Int) =
+        (if (n == 1) "1 carpeta va" else "$n carpetas van") + " a Printables con la extensión: se ha abierto el " +
+            "formulario en tu Chrome. Salen de pendientes cuando la extensión las apunta."
     fun pasanASubidos(n: Int) =
-        if (n == 1) "1 carpeta pasa a subidos (ya está en Creality Cloud)." else "$n carpetas pasan a subidos (ya están en Creality Cloud)."
-    const val ERRORES_CREALITY_EN_LISTA =
-        "Las que han fallado en Creality siguen en pendientes: en la lista tienen el enlace a su error."
+        if (n == 1) "1 carpeta pasa a subidos (ya está en todas sus páginas)." else "$n carpetas pasan a subidos (ya están en todas sus páginas)."
+    const val ERRORES_EN_LISTA =
+        "Las que han fallado siguen en pendientes: en la lista, la insignia roja abre su error."
     const val ABRIR_SUBIDOS = "Abrir subidos"
     const val ABRIR_ERRORES = "Abrir errores"
     fun verError(carpeta: String) = "Ver el error de $carpeta"
-    /** El nombre corto de cada web, para las insignias de la lista. */
+    /** El nombre corto de cada web (barra de abajo, al descargar). */
     fun webCorta(web: Web) = when (web) {
         Web.MAKERONLINE -> "MakerOnline"
         Web.CREALITY -> "Creality"
     }
-    /** Las insignias de cada carpeta: "Creality · subido", "MakerOnline · espera a Creality"… */
-    fun insignia(web: Web, estado: EstadoEnWeb) = webCorta(web) + " · " + when (estado) {
+    /** El nombre corto de cada página, para las insignias de la lista. */
+    fun webCorta(d: Destino) = when (d) {
+        Destino.CREALITY -> "Creality"
+        else -> d.nombre
+    }
+    /** Las insignias de cada carpeta: "Creality · subido", "Printables · falta"… */
+    fun insignia(d: Destino, estado: EstadoEnWeb) = webCorta(d) + " · " + when (estado) {
         EstadoEnWeb.SUBIDO -> "subido"
         EstadoEnWeb.ERROR -> "error · ver"
         EstadoEnWeb.FALTA -> "falta"
-        EstadoEnWeb.ESPERA -> "espera a Creality"
         EstadoEnWeb.SIN_3MF -> "no va (solo .stl)"
     }
     const val COMO_CARPETA = "¿Cómo tiene que ser una carpeta?"
+    // ------------------------------------------------------------ Creality: los que ya están en MakerOnline
+    fun crealitySubidos(n: Int) =
+        (if (n == 1) "1 carpeta ya subida a MakerOnline (en subidos) aún no está" else "$n carpetas ya subidas a MakerOnline (en subidos) aún no están") +
+            " en Creality Cloud. Se suben con las mismas opciones de arriba (ver Chrome, revisar) y no se mueven."
+    const val CREALITY_SUBIDOS_BOTON = "Subir a Creality las de subidos"
+    const val CREALITY_SUBIDOS_NADA = "No hay ninguna carpeta en subidos que falte en Creality Cloud (con .3mf)."
+    // ------------------------------------------------------------ Printables (extensión de Chrome)
+    const val PR_TITULO = "Printables"
+    const val PR_EXPLICACION =
+        "Printables no deja entrar al Chrome de la app, así que se sube desde tu Chrome de siempre con la " +
+            "extensión de JujaMaker. Marca Printables en \"Subir ahora\" y, al pulsar Subir, se abre tu Chrome y la extensión rellena cada " +
+            "modelo sola (como modelo original y sin IA), lo guarda como borrador y pasa sola al " +
+            "siguiente. Luego revisas los borradores en Printables y los publicas tú. Entran las carpetas a las que has elegido subir a Printables y aún no están allí."
+    fun prCuenta(porSubir: Int, conProblemas: Int, subidas: Int) =
+        (if (porSubir == 1) "1 por subir" else "$porSubir por subir") +
+            (if (conProblemas > 0) " · $conProblemas con problemas" else "") +
+            " · $subidas ya en Printables"
+    fun prUltima(texto: String) = "Apuntado: $texto"
+    const val PR_ABRIR = "Seguir con Printables"
+    const val PR_CARPETA_EXTENSION = "Carpeta de la extensión"
+    const val PR_INSTALAR =
+        "Instalarla (una vez): en Chrome abre chrome://extensions, activa \"Modo de desarrollador\", pulsa " +
+            "\"Cargar descomprimida\" y elige la carpeta de la extensión. Esta app tiene que estar abierta mientras subes. " +
+            "Si tu navegador por defecto no es Chrome, abre Printables en Chrome y pulsa \"Seguido\" en el panel."
+    // ------------------------------------------------------------ Subir a Makeroad (pantalla Subir)
+    const val MR_TITULO = "Makeroad"
+    const val MR_PUBLICAR = "Publicar en Makeroad"
+    const val MR_INICIO = "https://www.makeroad.com/"
+    const val MR_COMO_SUBE = "La app publica los modelos como públicos (Makeroad los revisa antes de enseñarlos)."
+    const val MR_INSTRUCCIONES_LOGIN =
+        "Se ha abierto Chrome en Makeroad. Inicia sesión allí (arriba a la derecha) y, cuando veas tu foto de perfil, " +
+            "pulsa \"Ya he entrado\". La sesión se queda guardada en la app."
+
+    // ------------------------------------------------------------ Descargar de Printables (extensión de Chrome)
+    const val PRD_TITULO = "Printables"
+    const val PRD_EXPLICACION =
+        "Printables no deja entrar al Chrome de la app, así que descarga la extensión de JujaMaker en tu Chrome " +
+            "de siempre (la misma que para subir). Al pulsar \"Descargar de Printables\" se abre Printables y la " +
+            "extensión baja los modelos nuevos de los usuarios marcados, igual que en las otras webs: los últimos de " +
+            "cada uno (los de arriba), solo los gratis, salta los que ya tienen tu like, les da like al terminar y " +
+            "deja todo en el mismo zip del escritorio. La app tiene que estar abierta mientras tanto."
+    const val PRD_CAMPO_AGREGAR = "Añadir un usuario: pega la dirección de su perfil"
+    const val PRD_AGREGAR_AYUDA =
+        "Por ejemplo https://www.printables.com/@VC_Design (o solo @VC_Design). Puedes poner un nombre delante: " +
+            "\"VC Design · https://www.printables.com/@VC_Design\"."
+    const val PRD_LISTA_VACIA = "Todavía no hay nadie en esta lista. Añade el primero arriba."
+    const val PRD_DESCARGAR = "Descargar de Printables"
+    const val PRD_REABRIR = "Volver a abrir Printables"
+    const val PRD_TAREA = "Descargando de Printables…"
+    const val PRD_ABIERTO =
+        "Abierto Printables en tu navegador: la extensión empieza sola (recuadro abajo a la izquierda)."
+    const val PRD_ESPERANDO =
+        "Esperando a la extensión… Si no arranca: abre Printables en Chrome con \"Volver a abrir Printables\", " +
+            "y comprueba en chrome://extensions que la extensión de JujaMaker está activada y actualizada (botón ↻)."
+    const val PRD_ERROR_MAXIMO = "Printables: el máximo de descargas tiene que ser un número de 1 en adelante (o vacío para sin límite)."
+    const val PRD_ERROR_LISTA_ROTA = "Printables: la lista de usuarios tiene un error (arréglala en usuarios-printables.json y pulsa Recargar)."
+    const val PRD_ERROR_LISTA_VACIA = "Printables: añade al menos un usuario a la lista."
+    const val PRD_ERROR_NINGUNO_MARCADO = "Printables: marca al menos un usuario."
+    fun prdUsuarioSinNombre(handle: String?) = if (handle == null) "(sin usuario)" else "@$handle"
+    fun prdResumen(r: dev.jefe.makeronline.DescargasPrintables.Resumen) = buildString {
+        append(if (r.simulado) "Se descargarían ${r.descargados}" else "Descargados ${r.descargados}")
+        if (r.soloLike > 0) append(" · ${r.soloLike} solo like")
+        if (r.yaTenianLike > 0) append(" · ${r.yaTenianLike} ya tenían like")
+        if (r.saltados > 0) append(" · ${r.saltados} saltados")
+        if (r.errores > 0) append(" · ${r.errores} con error")
+        if (r.parado) append(" · parado")
+    }
+
     // ------------------------------------------------------------ ventana Descripción
     const val AGREGAR_DESCRIPCION = "Agregar descripción"
     const val EDITAR_DESCRIPCION = "Editar descripción"
@@ -451,8 +528,8 @@ object Textos {
     const val ERROR_SIN_CARPETA = "Elige una carpeta de la lista, o marca \"Todas las que están bien\"."
     const val ERROR_CARPETA_CON_PROBLEMAS = "La carpeta seleccionada tiene problemas: arréglalos antes de subirla."
     const val ERROR_NADA_PARA_SUBIR = "No hay ninguna carpeta lista para subir en pendientes."
-    const val ERROR_NINGUNA_WEB = "Marca al menos una web donde subir."
-    const val ERROR_SIN_SESIONES = "No hay sesión en ninguna web: iníciala en la pantalla Sesión."
+    const val ERROR_NINGUNA_WEB = "Marca al menos una página donde subir."
+    const val ERROR_SIN_SESIONES = "Las páginas marcadas no tienen sesión: iníciala en la pantalla Sesión."
     const val ERROR_SESION_SIN_COMPROBAR =
         "Todavía no sé en qué webs tienes la sesión iniciada: espera un momento o compruébalo en la pantalla Sesión."
 

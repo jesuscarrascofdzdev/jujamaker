@@ -55,6 +55,17 @@ class EstadoSesion(
     /** Si hay sesión de MakerOnline (comprobada con MakerOnline). */
     val makerOnline: Boolean get() = estado?.iniciada == true
 
+    /** Si hay sesión de Makeroad (comprobada con Makeroad). Va aparte de [Web]: ver [abrirMakeroad]. */
+    val makeroad: Boolean get() = estado?.makeroad == true
+
+    /** true mientras Chrome está abierto para iniciar sesión en Makeroad. */
+    var esperandoMakeroad by mutableStateOf(false)
+        private set
+
+    /** Si el último error al abrir Chrome era de Makeroad. */
+    var errorMakeroad by mutableStateOf(false)
+        private set
+
     /** Si hay sesión de Creality Cloud guardada en Chrome. */
     val creality: Boolean get() = estado?.creality == true
 
@@ -82,6 +93,7 @@ class EstadoSesion(
         ocupado = true
         error = null
         errorDe = null
+        errorMakeroad = false
         try {
             estado = hilo.ejecutar { sesion.comprobar(ProgresoNulo) }
             comprobadaA = LocalTime.now().format(HORA)
@@ -118,6 +130,33 @@ class EstadoSesion(
         }
     }
 
+    /**
+     * Abre Chrome en Makeroad para que la persona inicie sesión (como [abrirParaIniciar], pero Makeroad
+     * aún no está en [Web]). "Ya he entrado" y "Cancelar" son los mismos.
+     */
+    suspend fun abrirMakeroad() {
+        if (!ocupacion.empezar(Textos.TAREA_INICIANDO_SESION)) return
+        ocupado = true
+        error = null
+        errorDe = null
+        errorMakeroad = false
+        esperandoMakeroad = true
+        try {
+            hilo.ejecutar { abierta = sesion.abrirParaIniciar(ProgresoNulo, Textos.MR_INICIO) }
+            esperandoLogin = true
+        } catch (e: CancellationException) {
+            esperandoMakeroad = false
+            throw e
+        } catch (e: Exception) {
+            error = mensajeDe(e)
+            errorMakeroad = true
+            esperandoMakeroad = false
+            ocupacion.terminar()
+        } finally {
+            ocupado = false
+        }
+    }
+
     /** La persona dice que ya ha entrado: se cierra Chrome (así se guarda la sesión) y se comprueba. */
     suspend fun yaHeEntrado() {
         cerrarChrome()
@@ -143,6 +182,7 @@ class EstadoSesion(
             ocupado = false
             esperandoLogin = false
             webEsperando = null
+            esperandoMakeroad = false
             ocupacion.terminar()
         }
     }

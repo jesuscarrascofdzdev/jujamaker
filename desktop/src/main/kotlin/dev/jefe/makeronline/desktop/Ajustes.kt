@@ -1,5 +1,6 @@
 package dev.jefe.makeronline.desktop
 
+import dev.jefe.makeronline.Destino
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
@@ -65,6 +66,27 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
+    /**
+     * En Subir, si está marcada esa página. Por defecto MakerOnline y Creality sí (como antes) y
+     * Printables y Makeroad no (llegaron después: que nadie suba allí sin querer).
+     */
+    fun subirA(d: Destino): Boolean = when (d) {
+        Destino.MAKERONLINE -> subirMakerOnline
+        Destino.CREALITY -> subirCreality
+        else -> valores.getProperty(SUBIR_A + d.name)?.toBooleanStrictOrNull() ?: false
+    }
+
+    fun subirA(d: Destino, si: Boolean) {
+        when (d) {
+            Destino.MAKERONLINE -> subirMakerOnline = si
+            Destino.CREALITY -> subirCreality = si
+            else -> {
+                valores.setProperty(SUBIR_A + d.name, si.toString())
+                guardar()
+            }
+        }
+    }
+
     /** En Descargar, cuántos de los últimos modelos de cada usuario se miran (por defecto, 10, como en la terminal). */
     var ultimosModelos: Int
         get() = valores.getProperty(ULTIMOS_MODELOS)?.toIntOrNull()?.takeIf { it >= 1 } ?: 10
@@ -113,6 +135,22 @@ class Ajustes(private val archivo: Path) {
             guardar()
         }
 
+    /** En Descargar, el máximo de descargas de Printables de cada vez; null = sin límite (por defecto). */
+    var maximoPrintables: Int?
+        get() = valores.getProperty(MAXIMO_PRINTABLES)?.toIntOrNull()?.takeIf { it >= 1 }
+        set(v) {
+            if (v == null) valores.remove(MAXIMO_PRINTABLES) else valores.setProperty(MAXIMO_PRINTABLES, v.toString())
+            guardar()
+        }
+
+    /** Los usuarios de Printables desmarcados en Descargar, por su handle en minúsculas. */
+    var desmarcadosPrintables: Set<String>
+        get() = valores.getProperty(DESMARCADOS_PRINTABLES)?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet() ?: emptySet()
+        set(v) {
+            if (v.isEmpty()) valores.remove(DESMARCADOS_PRINTABLES) else valores.setProperty(DESMARCADOS_PRINTABLES, v.sorted().joinToString(","))
+            guardar()
+        }
+
     /** Si la ventana se abre ocupando toda la pantalla (por defecto, sí, como siempre). */
     var ventanaMaximizada: Boolean
         get() = valores.getProperty(VENTANA_MAXIMIZADA)?.toBooleanStrictOrNull() ?: true
@@ -155,12 +193,16 @@ class Ajustes(private val archivo: Path) {
         const val VER_CHROME_AL_SUBIR = "verChromeAlSubir"
         const val SUBIR_MAKERONLINE = "subirMakerOnline"
         const val SUBIR_CREALITY = "subirCreality"
+        /** + el nombre de la página: "subirA.PRINTABLES", "subirA.MAKEROAD". */
+        const val SUBIR_A = "subirA."
         const val ULTIMOS_MODELOS = "ultimosModelos"
         const val MAXIMO_DESCARGAS = "maximoDescargas"
         const val DESCARGAR_MAKERONLINE = "descargarMakerOnline"
         const val DESCARGAR_CREALITY = "descargarCreality"
         const val MAXIMO_CREALITY = "maximoCreality"
         const val DESMARCADOS_CREALITY = "usuariosCrealityDesmarcados"
+        const val MAXIMO_PRINTABLES = "maximoPrintables"
+        const val DESMARCADOS_PRINTABLES = "usuariosPrintablesDesmarcados"
         const val VENTANA_MAXIMIZADA = "ventanaMaximizada"
         const val VENTANA_ANCHO = "ventanaAncho"
         const val VENTANA_ALTO = "ventanaAlto"

@@ -90,7 +90,7 @@ fun PantallaSesion(s: EstadoSesion, d: EstadoDatos, c: EstadoClaude, alcance: Co
 @Composable
 private fun TarjetaWebs(s: EstadoSesion, alcance: CoroutineScope) {
     val forma = RoundedCornerShape(12.dp)
-    val comprobando = s.ocupado && s.webEsperando == null
+    val comprobando = s.ocupado && s.webEsperando == null && !s.esperandoMakeroad
     Column(Modifier.fillMaxWidth().clip(forma).background(Colores.tarjeta).border(1.dp, Colores.borde, forma)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp),
@@ -104,7 +104,7 @@ private fun TarjetaWebs(s: EstadoSesion, alcance: CoroutineScope) {
         }
         if (comprobando) LinearProgressIndicator(Modifier.fillMaxWidth())
         // Los errores que no son de una web concreta (por ejemplo, otro programa está usando Chrome)
-        if (s.errorDe == null) {
+        if (s.errorDe == null && !s.errorMakeroad) {
             s.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
             }
@@ -113,6 +113,71 @@ private fun TarjetaWebs(s: EstadoSesion, alcance: CoroutineScope) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(Colores.bordeSuave))
             FilaWeb(s, web, alcance)
         }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Colores.bordeSuave))
+        FilaMakeroad(s, alcance)
+    }
+}
+
+/**
+ * Makeroad, como [FilaWeb] pero aparte porque aún no está en [Web]. La sesión se guarda en el Chrome
+ * de la app y se comprueba de verdad con Makeroad (ver Sesion.comprobarMakeroad).
+ */
+@Composable
+private fun FilaMakeroad(s: EstadoSesion, alcance: CoroutineScope) {
+    val e = s.estado
+    val iniciada = s.makeroad
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            IconoTarjeta(Iconos.globo)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(Textos.MR_TITULO, style = MaterialTheme.typography.titleMedium)
+                Text(Textos.MR_COMO_SUBE, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+            }
+            when {
+                e == null -> Etiqueta(
+                    if (s.ocupado) Textos.COMPROBANDO else Textos.SIN_COMPROBAR,
+                    Colores.tarjetaAlta, Colores.textoSuave, punto = Colores.textoApagado,
+                )
+                iniciada -> Etiqueta(
+                    Textos.sesionIniciadaCorta(e.nombreMakeroad),
+                    Colores.verdeFondo, Colores.verdeTexto, punto = Colores.verde,
+                )
+                else -> Etiqueta(Textos.SIN_SESION, Colores.rojoFondo, Colores.rojoTexto, punto = Colores.rojo)
+            }
+            Box(Modifier.width(200.dp), contentAlignment = Alignment.CenterEnd) {
+                if (iniciada) {
+                    BotonEnlace(Textos.VOLVER_A_INICIAR, { alcance.launch { s.abrirMakeroad() } }, enabled = s.libre)
+                } else {
+                    BotonPrincipal(
+                        Textos.INICIAR_SESION,
+                        { alcance.launch { s.abrirMakeroad() } },
+                        enabled = s.libre && e?.chromeInstalado != false,
+                    )
+                }
+            }
+        }
+        if (s.esperandoLogin && s.esperandoMakeroad) {
+            val forma = RoundedCornerShape(10.dp)
+            Column(
+                Modifier.padding(start = 56.dp).fillMaxWidth()
+                    .clip(forma)
+                    .background(Colores.acentoFondo)
+                    .border(1.dp, Colores.seleccionBorde, forma)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(Textos.MR_INSTRUCCIONES_LOGIN, style = MaterialTheme.typography.bodyMedium, color = Colores.textoClaro)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BotonPrincipal(Textos.YA_HE_ENTRADO, { alcance.launch { s.yaHeEntrado() } }, enabled = !s.ocupado)
+                    BotonSecundario(Textos.CANCELAR, { alcance.launch { s.cancelarInicio() } }, enabled = !s.ocupado)
+                }
+            }
+        }
+        if (s.ocupado && s.esperandoMakeroad) LinearProgressIndicator(Modifier.fillMaxWidth())
+        if (s.errorMakeroad) s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }
 

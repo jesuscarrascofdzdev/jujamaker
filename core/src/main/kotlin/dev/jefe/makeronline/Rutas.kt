@@ -32,6 +32,18 @@ class Rutas @JvmOverloads constructor(
     /** Como [registro], pero de Creality Cloud: un id de modelo por línea. */
     val registroCreality: Path get() = datos.resolve("descargados-creality.txt")
 
+    /**
+     * Las carpetas que se han visto en pendientes/ (una por línea): de subidos/, solo esas van a la cola
+     * de Printables, no las que ya estaban subidas a MakerOnline de antes (ver ColaPrintables).
+     */
+    val vistasPrintables: Path get() = datos.resolve("printables-vistas.txt")
+
+    /** Lista de usuarios de Printables de los que se descarga (con la extensión de Chrome). */
+    val usuariosPrintables: Path get() = datos.resolve("usuarios-printables.json")
+
+    /** Como [registro], pero de Printables: un id de modelo por línea. */
+    val registroPrintables: Path get() = datos.resolve("descargados-printables.txt")
+
     /** Ajustes de la app de escritorio que se recuerdan de una vez para otra. */
     val ajustes: Path get() = datos.resolve("ajustes.properties")
 
@@ -74,5 +86,18 @@ class Rutas @JvmOverloads constructor(
         /** La carpeta desde la que se lanza el programa: lo de siempre en la versión de terminal. */
         @JvmStatic
         fun carpetaActual(): Rutas = Rutas(Path.of(""))
+
+        /**
+         * La carpeta de datos de la app de escritorio, para los programas de terminal que tienen que
+         * trabajar con las carpetas y la sesión de Chrome de la app (Makeroad): la de
+         * -Dmakeronline.datos si se da; si no, en Windows %LOCALAPPDATA%\MakerOnline Desktop (la de
+         * CarpetaDatos, en desktop) si existe; si no, la carpeta desde la que se lanza.
+         */
+        @JvmStatic
+        fun deLaApp(): Rutas {
+            System.getProperty("makeronline.datos")?.takeIf { it.isNotBlank() }?.let { return Rutas(Path.of(it)) }
+            val local = System.getenv("LOCALAPPDATA")?.takeIf { it.isNotBlank() }?.let { Path.of(it, "MakerOnline Desktop") }
+            return if (local != null && java.nio.file.Files.isDirectory(local)) Rutas(local) else carpetaActual()
+        }
     }
 }

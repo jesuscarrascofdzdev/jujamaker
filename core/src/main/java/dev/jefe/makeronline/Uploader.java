@@ -59,7 +59,27 @@ public class Uploader {
      * @param verChrome true = ventana de Chrome a la vista todo el rato (en la terminal, siempre);
      *                  false = fuera de la pantalla, y aparece solo para revisar cada borrador
      */
-    public record Opciones(boolean revisar, List<String> carpetas, boolean esperar, boolean verChrome) {}
+    /**
+     * @param mover true (lo de siempre): al guardar, la carpeta pasa a subidos/ (y a errores/ si falla).
+     *              false (subida a varias páginas, ver SubidaMultiple y Destino): no se mueve nada; se apunta
+     *              subido-makeronline.txt (o error-makeronline.txt) en la carpeta y la retira quien la llama
+     *              cuando está en todas sus páginas.
+     */
+    public record Opciones(boolean revisar, List<String> carpetas, boolean esperar, boolean verChrome, boolean mover) {
+        public Opciones(boolean revisar, List<String> carpetas, boolean esperar, boolean verChrome) {
+            this(revisar, carpetas, esperar, verChrome, true);
+        }
+    }
+
+    /** Con [Opciones#mover] = false: dentro de la carpeta, que ya está en MakerOnline (fecha). */
+    public static final String REGISTRO = "subido-makeronline.txt";
+    /** Con [Opciones#mover] = false: dentro de la carpeta, por qué falló la última vez. */
+    public static final String ERROR_TXT = "error-makeronline.txt";
+
+    /** Si esa carpeta ya se subió a MakerOnline sin moverla (tiene subido-makeronline.txt). */
+    public static boolean yaSubido(Path carpeta) {
+        return Files.exists(carpeta.resolve(REGISTRO));
+    }
 
     /**
      * Cómo ha ido una ejecución.
@@ -164,12 +184,16 @@ public class Uploader {
         int invalidos = 0;
         List<Path> enErrores = new ArrayList<>();
         for (Path dir : carpetas) {
+            if (!op.mover() && yaSubido(dir)) {
+                progreso.saltado(dir.getFileName() + ": ya está en MakerOnline (" + REGISTRO + "), no se vuelve a subir");
+                continue;
+            }
             try {
                 listos.add(ModelFolder.load(dir));
                 progreso.correcto(dir.getFileName() + " validado");
             } catch (IllegalStateException | IOException e) {
                 progreso.error(dir.getFileName() + ":\n   " + e.getMessage().replace("\n", "\n   "));
-                anotar(enErrores, moverAErrores(dir, e.getMessage()));
+                if (op.mover()) anotar(enErrores, moverAErrores(dir, e.getMessage()));
                 invalidos++;
             }
         }
@@ -219,12 +243,27 @@ public class Uploader {
                     captura(page, m.dir().resolve("error.png"));
                     // Primero se cierra la pestaña: así Chrome deja de leer los archivos y Windows deja moverlos
                     cerrar(page);
-                    anotar(enErrores, moverAErrores(m.dir(), e.toString()));
+                    if (op.mover()) {
+                        anotar(enErrores, moverAErrores(m.dir(), e.toString()));
+                    } else {
+                        anotarError(m.dir(), e.toString());
+                    }
                     ko++;
                 } finally {
                     cerrar(page);
                 }
-                if (guardado) {
+                if (guardado && !op.mover()) {
+                    ok++;
+                    try {
+                        Files.writeString(m.dir().resolve(REGISTRO), LocalDateTime.now().format(STAMP) + "\n");
+                        Files.deleteIfExists(m.dir().resolve(ERROR_TXT));
+                        progreso.correcto("Borrador guardado en MakerOnline: " + m.name());
+                    } catch (IOException e) {
+                        progreso.error("El borrador se ha guardado en MakerOnline, pero no he podido apuntarlo en "
+                                + m.dir().resolve(REGISTRO) + ": " + e.getMessage()
+                                + "\n  Bórrala de pendientes/ o desmarca MakerOnline para que no se vuelva a subir.");
+                    }
+                } else if (guardado) {
                     ok++;
                     try {
                         Path destino = mover(m.dir(), rutas.getSubidos());
@@ -530,6 +569,16 @@ public class Uploader {
             page.screenshot(new Page.ScreenshotOptions().setPath(destino).setFullPage(true));
         } catch (Exception ignored) {
             // si la página ya no responde, seguimos sin captura
+        }
+    }
+
+    /** Sin mover la carpeta: escribe error-makeronline.txt en ella (para la insignia de error). */
+    private void anotarError(Path dir, String mensaje) {
+        try {
+            Files.writeString(dir.resolve(ERROR_TXT), LocalDateTime.now().format(STAMP) + "\n" + mensaje + "\n",
+                    StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            progreso.error("No he podido escribir " + ERROR_TXT + ": " + e.getMessage());
         }
     }
 

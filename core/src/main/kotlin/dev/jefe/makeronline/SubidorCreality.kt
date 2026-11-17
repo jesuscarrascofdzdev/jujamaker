@@ -43,7 +43,8 @@ import kotlin.system.exitProcess
  *   --revisar   antes de enviar cada modelo, se para para que mires el formulario:
  *               ENTER lo envía; "no" + ENTER no lo envía.
  *   --esperar   si otro programa del agente está en marcha, espera a que termine.
- *   nombre ...  solo esas carpetas de pendientes/ (sin nombres, todas).
+ *   --subidos   de subidos/ (las ya subidas a MakerOnline) en vez de pendientes/.
+ *   nombre ...  solo esas carpetas de pendientes/ (o de subidos/ con --subidos; sin nombres, todas).
  * Para pararlo sin dejar nada a medias: "parar" + ENTER.
  */
 class SubidorCreality(
@@ -59,12 +60,16 @@ class SubidorCreality(
      * @property esperar   si otro programa del agente está en marcha, espera a que termine
      * @property verChrome true = Chrome a la vista todo el rato (en la terminal, siempre); false = fuera
      *                     de la pantalla, y aparece solo para revisar cada modelo (como el Uploader)
+     * @property desdeSubidos true = las carpetas se buscan en subidos/ en vez de en pendientes/: las que ya
+     *                     se subieron a MakerOnline (que las mueve ahí) y aún no están en Creality. Como en
+     *                     pendientes/, no se mueven y se apunta subido-creality.txt.
      */
     data class Opciones(
         val revisar: Boolean,
         val carpetas: List<String>,
         val esperar: Boolean,
         val verChrome: Boolean = true,
+        val desdeSubidos: Boolean = false,
     )
 
     /**
@@ -87,14 +92,14 @@ class SubidorCreality(
         RuntimeException("$paso: $motivo", causa)
 
     fun ejecutar(op: Opciones): Resumen {
-        val pendientes = rutas.pendientes
+        val pendientes = if (op.desdeSubidos) rutas.subidos else rutas.pendientes
         Files.createDirectories(pendientes)
         if (!Files.isDirectory(rutas.perfilChrome)) {
             throw AgenteException("No hay sesión guardada. Inicia sesión primero (app: pantalla Sesión).")
         }
         var carpetas = Files.list(pendientes).use { s -> s.filter { Files.isDirectory(it) }.sorted().toList() }
         if (op.carpetas.isNotEmpty()) {
-            for (n in op.carpetas) if (!Files.isDirectory(pendientes.resolve(n))) progreso.error("No existe en pendientes: $n")
+            for (n in op.carpetas) if (!Files.isDirectory(pendientes.resolve(n))) progreso.error("No existe en ${pendientes.fileName}: $n")
             carpetas = carpetas.filter { it.fileName.toString() in op.carpetas }
         }
         if (carpetas.isEmpty()) {
@@ -812,6 +817,19 @@ class SubidorCreality(
     }
 
     companion object {
+        /**
+         * Las carpetas de subidos/ (ya en MakerOnline) que aún no están en Creality y tienen .3mf, por
+         * nombre: las que puede subir [Opciones.desdeSubidos].
+         */
+        @JvmStatic
+        fun subidosSinCreality(rutas: Rutas): List<String> {
+            val base = rutas.subidos
+            if (!Files.isDirectory(base)) return emptyList()
+            return Files.list(base).use { st -> st.filter { Files.isDirectory(it) }.sorted().toList() }
+                .filter { !yaSubido(it) && runCatching { ModelFolder.load(it).perfil() != null }.getOrDefault(false) }
+                .map { it.fileName.toString() }
+        }
+
         const val WEB = "https://www.crealitycloud.com"
 
         /** Dentro de la carpeta del modelo: lo subido a Creality (id, dirección y fecha). */
@@ -882,6 +900,7 @@ class SubidorCreality(
                 revisar = "--revisar" in lista,
                 carpetas = lista.filter { !it.startsWith("--") },
                 esperar = "--esperar" in lista,
+                desdeSubidos = "--subidos" in lista,
             )
             val rutas = Rutas.carpetaActual()
             val progreso = ProgresoConsola()
