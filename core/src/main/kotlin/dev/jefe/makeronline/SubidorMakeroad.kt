@@ -461,10 +461,15 @@ class SubidorMakeroad(
      */
     private fun escribirEtiquetas(page: Page, etiquetas: List<String>) {
         if (etiquetas.isEmpty()) return
-        val campo = page.locator("input.arco-select-view-input[placeholder*='etiqueta' i], input.arco-select-view-input[placeholder*='tag' i]").first()
-        if (campo.count() == 0) throw IllegalStateException("no encuentro el campo de etiquetas")
+        // Se busca por su texto de ayuda, pero ese texto desaparece en cuanto hay una etiqueta puesta
+        // (pasó el 17/11/2026): así que se apunta su posición entre los desplegables y se usa esa
+        val todos = page.locator("input.arco-select-view-input")
+        val posicion = (0 until todos.count()).firstOrNull { i ->
+            Regex("etiqueta|tag", RegexOption.IGNORE_CASE).containsMatchIn(todos.nth(i).getAttribute("placeholder") ?: "")
+        } ?: throw IllegalStateException("no encuentro el campo de etiquetas")
+        val campo = todos.nth(posicion)
         // El recuadro del desplegable, para contar las etiquetas puestas (cada una es un .arco-tag)
-        val vista = page.locator(".arco-select-view").filter(Locator.FilterOptions().setHas(campo)).first()
+        val vista = campo.locator("xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' arco-select-view ')][1]")
         fun puestas(): Int = runCatching { vista.locator(".arco-tag").count() }.getOrDefault(0)
         var saltadas = 0
         for (e in etiquetas) {
