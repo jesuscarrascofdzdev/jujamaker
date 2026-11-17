@@ -397,6 +397,19 @@ object Textos {
         "Instalarla (una vez): en Chrome abre chrome://extensions, activa \"Modo de desarrollador\", pulsa " +
             "\"Cargar descomprimida\" y elige la carpeta de la extensión. Esta app tiene que estar abierta mientras subes. " +
             "Si tu navegador por defecto no es Chrome, abre Printables en Chrome y pulsa \"Seguido\" en el panel."
+    // ------------------------------------------------------------ Subir a Makeroad (pantalla Subir)
+    const val MR_TITULO = "Makeroad"
+    const val MR_EXPLICACION =
+        "Publica en Makeroad como público las mismas carpetas (todas las válidas o solo la seleccionada, según " +
+            "\"Subir ahora\"). Makeroad revisa cada modelo antes de enseñarlo. Necesita al menos 3 fotos por carpeta; " +
+            "las que ya están en Makeroad no se vuelven a subir."
+    const val MR_AYUDA =
+        "La primera vez, Makeroad te pedirá iniciar sesión en la ventana de Chrome que se abre. Con \"Revisar\" " +
+            "marcado, se para antes de publicar cada modelo para que lo mires."
+    const val MR_NADA = "No hay carpetas válidas para subir a Makeroad."
+    const val MR_PUBLICAR = "Publicar en Makeroad"
+    fun mrBoton(n: Int) = if (n == 1) "Publicar 1 en Makeroad" else "Publicar $n en Makeroad"
+
     // ------------------------------------------------------------ Descargar de Printables (extensión de Chrome)
     const val PRD_TITULO = "Printables"
     const val PRD_EXPLICACION =

@@ -221,11 +221,10 @@ class SubidorMakeroad(
             try {
                 page.locator("input.arco-input").locator("visible=true").first().waitFor(Locator.WaitForOptions().setTimeout(30_000.0))
             } catch (e: TimeoutError) {
-                if (pideSesion(page)) throw SinSesion()
-                if (hayCaptcha(page)) throw ConCaptcha()
-                throw IllegalStateException("no se ha cargado el formulario de subida")
+                if (!pideSesion(page) && hayCaptcha(page)) throw ConCaptcha()
+                if (!pideSesion(page)) throw IllegalStateException("no se ha cargado el formulario de subida")
             }
-            if (pideSesion(page)) throw SinSesion()
+            if (pideSesion(page)) esperarSesion(page, ventana)
             val tipo = grupos(page).firstOrNull() ?: throw IllegalStateException("no encuentro las opciones del formulario (.arco-radio-group)")
             marcarOpcion(tipo, "1", "Modelo original")
         }
@@ -294,7 +293,7 @@ class SubidorMakeroad(
         if (revisar) {
             ventana?.mostrar()
             val publicar = try {
-                revision.confirmar(m.name())
+                revision.confirmar("${m.name()} · $NOMBRE") // la app pone "Publicar en Makeroad" en el botón
             } finally {
                 ventana?.apartar()
             }
@@ -302,6 +301,30 @@ class SubidorMakeroad(
         }
         cancelacion.comprobar() // último punto seguro
         paso("Publicar (público)") { publicar(page, revisar) }
+    }
+
+    /**
+     * La web pide iniciar sesión: se enseña la ventana de Chrome y se espera hasta 5 minutos a que la
+     * persona entre (la sesión se queda en el perfil de Chrome de la app para las siguientes veces).
+     */
+    private fun esperarSesion(page: Page, ventana: Downloader.Ventana?) {
+        ventana?.mostrar()
+        progreso.info("   Makeroad pide iniciar sesión: entra tú en la ventana de Chrome que se ha abierto. Espero hasta 5 minutos.")
+        val limite = System.currentTimeMillis() + 5 * 60_000L
+        try {
+            while (pideSesion(page)) {
+                cancelacion.comprobar()
+                if (System.currentTimeMillis() > limite) throw SinSesion()
+                page.waitForTimeout(2000.0)
+            }
+            page.waitForTimeout(2000.0)
+            page.navigate(FORMULARIO)
+            page.locator("input.arco-input").locator("visible=true").first().waitFor(Locator.WaitForOptions().setTimeout(30_000.0))
+            if (pideSesion(page)) throw SinSesion()
+            progreso.correcto("Sesión iniciada en Makeroad")
+        } finally {
+            ventana?.apartar()
+        }
     }
 
     // ------------------------------------------------------------------ campos
@@ -499,6 +522,7 @@ class SubidorMakeroad(
 
     companion object {
         const val WEB = "https://www.makeroad.com"
+        const val NOMBRE = "Makeroad"
         /** El formulario de subida (comprobado el 17/11/2026). */
         const val FORMULARIO = "$WEB/spa/printable_3D_model/upload"
 

@@ -169,6 +169,7 @@ fun PantallaSubir(
                     PanelRevision(s)
                     // Arriba, para que se vea sin tener que bajar: Printables va aparte (con la extensión)
                     PanelPrintables(printables)
+                    PanelMakeroad(s, alcance)
                     PanelSubirAhora(s, alcance, irASesion)
                     PanelProgresoSubida(s)
                     PanelResumenSubida(s, rutas)
@@ -229,6 +230,29 @@ private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope, irASesion:
                 enabled = s.libre && !s.copiando && s.disponible(Web.CREALITY),
             )
         }
+    }
+}
+
+/**
+ * Makeroad: se publica con el Chrome de la app, como Creality, pero con su propio botón porque aún no
+ * está en [Web] (ver SubidorMakeroad). Usa las carpetas, "Ver Chrome" y "Revisar" de "Subir ahora".
+ */
+@Composable
+private fun PanelMakeroad(s: EstadoSubida, alcance: CoroutineScope) {
+    val n = if (s.soloSeleccionada) (if (s.seleccionada != null) 1 else 0) else s.carpetas.count { it.valida }
+    Tarjeta(espacio = 8.dp) {
+        Text(Textos.MR_TITULO, style = MaterialTheme.typography.titleMedium)
+        Text(Textos.MR_EXPLICACION, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BotonPrincipal(
+                Textos.mrBoton(n),
+                { alcance.launch { s.subirAMakeroad() } },
+                Modifier.weight(1f),
+                enabled = s.libre && !s.copiando && n > 0,
+            )
+            BotonParar(Textos.PARAR, { s.parar() }, enabled = s.enMarcha && !s.parando)
+        }
+        Text(Textos.MR_AYUDA, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
     }
 }
 
@@ -527,7 +551,11 @@ private fun PanelRevision(s: EstadoSubida) {
     ) {
         Text("⏸ " + Textos.revisarAhora(modelo), style = MaterialTheme.typography.titleMedium, color = Colores.acentoTexto)
         // El modelo llega como "flower · Creality Cloud": en Creality se envía (privado), en MakerOnline se guarda el borrador
-        val enviar = if (modelo.endsWith(Web.CREALITY.nombre)) Textos.ENVIAR_PRIVADO else Textos.GUARDAR_BORRADOR
+        val enviar = when {
+            modelo.endsWith(Web.CREALITY.nombre) -> Textos.ENVIAR_PRIVADO
+            modelo.endsWith(dev.jefe.makeronline.SubidorMakeroad.NOMBRE) -> Textos.MR_PUBLICAR
+            else -> Textos.GUARDAR_BORRADOR
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BotonPrincipal(enviar, { s.guardarBorrador() })
             BotonSecundario(Textos.DESCARTAR, { s.descartar() })

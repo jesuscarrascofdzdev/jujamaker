@@ -13,6 +13,7 @@ import dev.jefe.makeronline.ModelMeta
 import dev.jefe.makeronline.Rutas
 import dev.jefe.makeronline.SubidaMultiple
 import dev.jefe.makeronline.SubidorCreality
+import dev.jefe.makeronline.SubidorMakeroad
 import dev.jefe.makeronline.TextosCarpeta
 import dev.jefe.makeronline.Web
 import kotlinx.coroutines.Dispatchers
@@ -573,6 +574,50 @@ class EstadoSubida(
             ocupacion.terminar()
             cargar()
             contarSubidosSinCreality()
+        }
+    }
+
+    /**
+     * Publica en Makeroad las carpetas válidas (o solo la seleccionada) con [SubidorMakeroad]. Va aparte
+     * de la subida de arriba porque Makeroad aún no está en [Web]; no mueve las carpetas (apunta
+     * subido-makeroad.txt en cada una). Usa "Ver Chrome" y "Revisar" de arriba. Si Makeroad pide iniciar
+     * sesión, se enseña la ventana de Chrome para que entres (solo la primera vez).
+     */
+    suspend fun subirAMakeroad() {
+        cargar()
+        val nombres = if (soloSeleccionada) listOfNotNull(seleccionada) else carpetas.filter { it.valida }.map { it.nombre }
+        if (nombres.isEmpty()) {
+            error = Textos.MR_NADA
+            return
+        }
+        if (!ocupacion.empezar(Textos.TAREA_SUBIENDO)) return
+        reiniciar()
+        enMarcha = true
+        val c = Cancelacion()
+        cancelacion = c
+        val r = RevisionApp(c) { porRevisar = it }
+        revision = r
+        try {
+            hilo.ejecutar {
+                AgentLock.acquire(rutas.candado, "JujaMaker (subiendo a Makeroad)", false, progreso).use {
+                    SubidorMakeroad(rutas, progreso, c, r).ejecutar(SubidorMakeroad.Opciones(revisar, nombres, false, verChrome))
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e // la app se está cerrando: no es un error
+        } catch (e: AgenteException) {
+            error = e.message
+        } catch (e: Exception) {
+            error = Textos.errorInesperado(e)
+        } finally {
+            enMarcha = false
+            parando = false
+            cancelacion = null
+            revision = null
+            porRevisar = null
+            modeloActual = null
+            ocupacion.terminar()
+            cargar()
         }
     }
 
