@@ -7,7 +7,7 @@ y descargar modelos de MakerOnline. App no oficial.
 - **MakerOnline** y **Creality Cloud**: hechas (autor original del repo).
 - **MakerWorld** (Bambu Lab): apartado en la rama `makerworld` (PR en borrador). No sube la app (Cloudflare): sube la persona con la extensión de Chrome `extension-makerworld`. Se dejó porque MakerWorld pide fotos de impresiones reales. Ver `docs/contexto-makerworld.md` en esa rama.
 - **Printables** (Prusa): en curso en la rama `printables`. Cloudflare no deja entrar al Chrome de la app (comprobado con `DiagnosticoPrintables`): sube la persona con la extensión de Chrome `extension-printables`, que rellena el formulario con la cola de la app. Ver `docs/contexto-printables.md`. Resumen de lo que trae la rama para quien la fusione: `docs/cambios-printables.md`.
-- **Makeroad**: en curso en la rama `makeroad`. Sin Cloudflare: sube el Chrome de la app, como Creality (`SubidorMakeroad`, guarda como borrador y privado). Ver `docs/contexto-makeroad.md`.
+- **Makeroad**: en curso en la rama `makeroad`. Sin Cloudflare: sube el Chrome de la app, como Creality (`SubidorMakeroad`). Excepción a la regla de abajo, pedida por la persona el 17/11/2026: a Makeroad se **publica directamente como público** (Makeroad lo pasa por su revisión). Ver `docs/contexto-makeroad.md`.
 
 ## Estructura
 - `core/`: lógica sin interfaz. Java heredado (`src/main/java`: Uploader, Downloader, ModelFolder, AgentLock…)
@@ -27,7 +27,7 @@ y descargar modelos de MakerOnline. App no oficial.
 ## Reglas
 - Código, comentarios, nombres y textos en **español**, con el estilo del código existente (KDoc que explica el porqué).
 - Nada de la web se programa de memoria: se comprueba y se anota la fecha.
-- Se sube como borrador o privado; la persona publica.
+- Se sube como borrador o privado; la persona publica (salvo Makeroad, ver arriba).
 - Los captchas **no se saltan**: se enseña la ventana. La sesión (perfil de Chrome) nunca sale del ordenador.
 - Todo lo que usa Chrome coge el candado `AgentLock`.
 - Cambios en ramas y con pull request; no tocar `main` directamente.

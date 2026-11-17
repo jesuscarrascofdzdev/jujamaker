@@ -19,8 +19,10 @@ import kotlin.system.exitProcess
  * Aliyun: si un día detecta el Chrome de la app y saca el captcha, **no se salta**: se para y se te
  * enseña la ventana para que lo resuelvas (con --revisar). DiagnosticoMakeroad lo comprueba.
  *
- * Cada modelo se **guarda sin publicar** ("Registrar", que en inglés es "Save" y lo deja en borradores)
- * y además como **Privado**. Lo revisas en Makeroad y lo publicas tú. Nunca pulsa "Publicar".
+ * Cada modelo se **publica directamente como público** (botón "Publicar"), a petición de la persona
+ * (17/11/2026): es la excepción a la regla de subir como borrador. Makeroad no lo enseña al momento:
+ * responde "Enviado para revisión" (`toasts.submitSuccess`) y pasa por su moderación. Para mirar cada
+ * modelo antes de publicarlo, usa --revisar.
  *
  * Lo que usa del formulario (https://www.makeroad.com/spa/printable_3D_model/upload, hecho con Arco
  * Design y el editor wangEditor; visto el 17/11/2026 en la página, sin guardar nada):
@@ -36,20 +38,22 @@ import kotlin.system.exitProcess
  *  - Método de impresión: `span.method-text` "FDM".
  *  - Licencia: tres grupos de opciones (compartir sin atribución, modificar, uso comercial): se marca
  *    "Sí" (value=2) en los tres, lo más parecido a CC0, como en Creality.
- *  - Visibilidad: "Privado" (value=2).
+ *  - Visibilidad: "público" (value=1; "Privado" es 2).
+ *  - Términos: la casilla "Entiendo y acepto…" es obligatoria para publicar
+ *    (`toasts.agreementRequired`: "Por favor, acepte primero los términos de la plataforma.").
  *  - Botones de abajo `div.layout-btn`, por orden: "Registrar" (guardar), "Avance" (vista previa) y
  *    "Publicar".
  *
- * Sin comprobar todavía (hay que verlo con DiagnosticoMakeroad o en la primera subida con --revisar):
- * cómo responde la web al guardar (se espera el aviso de "Guardado…" / "Saved…") y si hay que marcar
- * la casilla de términos para guardar (se marca si se encuentra).
+ * Sin comprobar todavía (hay que verlo en la primera subida con --revisar): que el aviso al publicar
+ * salga como dice el código de la web ("Enviado para revisión" / "Submitted for Review") y que el
+ * botón "Publicar" se active al tener todo relleno (empieza desactivado).
  *
  * No mueve las carpetas: apunta lo subido en `subido-makeroad.txt` dentro de la carpeta, y las que lo
  * tienen no se vuelven a subir. Si algo falla, deja `error-makeroad.txt` y `error-makeroad.png`.
  *
  * Programa de terminal (configuración "Subir a Makeroad (revisar)"):
- *   --revisar   antes de guardar cada modelo, se para para que mires el formulario:
- *               ENTER lo guarda; "no" + ENTER no lo guarda.
+ *   --revisar   antes de publicar cada modelo, se para para que mires el formulario:
+ *               ENTER lo publica; "no" + ENTER no lo publica.
  *   --esperar   si otro programa del agente está en marcha, espera a que termine.
  *   --subidos   de subidos/ (las ya subidas a MakerOnline) en vez de pendientes/.
  *   nombre ...  solo esas carpetas (sin nombres, todas).
@@ -111,7 +115,9 @@ class SubidorMakeroad(
             try {
                 val m = ModelFolder.load(dir)
                 if (m.imagenes().size < CatalogoMakeroad.MIN_FOTOS) {
-                    progreso.nota("${dir.fileName}: tiene ${m.imagenes().size} foto(s) y Makeroad pide ${CatalogoMakeroad.MIN_FOTOS} para publicar (se guarda igual; añade más antes de publicar)")
+                    progreso.error("${dir.fileName}: tiene ${m.imagenes().size} foto(s) y Makeroad pide al menos ${CatalogoMakeroad.MIN_FOTOS} para publicar")
+                    sinSubir++
+                    continue
                 }
                 listos += m
                 progreso.correcto("${dir.fileName} validado")
@@ -148,25 +154,25 @@ class SubidorMakeroad(
                         anotarSubido(m.dir(), page.url())
                         captura(page, m.dir().resolve(CAPTURA_OK))
                         borrarErroresAnteriores(m.dir())
-                        progreso.correcto("Guardado en Makeroad (borrador, privado): ${m.name()}")
+                        progreso.correcto("Publicado en Makeroad (enviado para revisión): ${m.name()}")
                         ok++
                     } catch (_: CanceladoException) {
                         parado = true
                         sinSubir += listos.size - i
-                        progreso.info("⏹ ${m.name()} no se ha guardado en Makeroad.")
+                        progreso.info("⏹ ${m.name()} no se ha publicado en Makeroad.")
                     } catch (_: Descartado) {
                         sinSubir++
-                        progreso.saltado("No se guarda ${m.name()} en Makeroad.")
+                        progreso.saltado("No se publica ${m.name()} en Makeroad.")
                     } catch (_: SinSesion) {
                         throw AgenteException(
                             "No hay sesión de Makeroad en el Chrome de la app. Inicia sesión en Makeroad en esa ventana " +
                                 "(o lanza el diagnóstico) y vuelve a probar. " +
-                                (if (ok > 0) "Antes se han guardado bien $ok." else "No se ha guardado nada en Makeroad.")
+                                (if (ok > 0) "Antes se han publicado bien $ok." else "No se ha publicado nada en Makeroad.")
                         )
                     } catch (_: ConCaptcha) {
                         throw AgenteException(
                             "Makeroad ha sacado su captcha. No se salta: súbelo con --revisar (o desde la app con Chrome a la " +
-                                "vista) para resolverlo tú. " + (if (ok > 0) "Antes se han guardado bien $ok." else "")
+                                "vista) para resolverlo tú. " + (if (ok > 0) "Antes se han publicado bien $ok." else "")
                         )
                     } catch (e: Exception) {
                         val mensaje = e.message?.lineSequence()?.firstOrNull() ?: e.toString()
@@ -182,7 +188,7 @@ class SubidorMakeroad(
                 }
             }
         }
-        progreso.info("\n${if (parado) "Parado" else "Terminado"}: $ok guardados en Makeroad, $ko con error." +
+        progreso.info("\n${if (parado) "Parado" else "Terminado"}: $ok publicados en Makeroad, $ko con error." +
             (if (yaSubidos > 0) " $yaSubidos ya estaban." else "") +
             (if (sinSubir > 0) " $sinSubir sin subir." else ""))
         return Resumen(ok, yaSubidos, ko, sinSubir, parado)
@@ -207,7 +213,7 @@ class SubidorMakeroad(
         }
     }
 
-    /** Rellena el formulario con un modelo y lo guarda (borrador, privado). */
+    /** Rellena el formulario con un modelo y lo publica (público; Makeroad lo revisa antes de enseñarlo). */
     private fun subir(page: Page, m: ModelFolder, revisar: Boolean, ventana: Downloader.Ventana?) {
         val meta = m.meta()
         paso("Abrir el formulario de Makeroad") {
@@ -247,7 +253,7 @@ class SubidorMakeroad(
             esperarSubidas(page, "las fotos")
         }
 
-        cancelacion.comprobar() // punto seguro: no se ha guardado nada
+        cancelacion.comprobar() // punto seguro: no se ha publicado nada
 
         val titulo = recortar(meta.title(), CatalogoMakeroad.MAX_TITULO, "El título")
         paso("Título") {
@@ -276,7 +282,7 @@ class SubidorMakeroad(
             if (g.size < 5) throw IllegalStateException("esperaba 5 grupos de opciones y hay ${g.size}")
             for (i in 1..3) marcarOpcion(g[i], "2", "Sí")
         }
-        paso("Visibilidad privada") { marcarOpcion(grupos(page)[4], "2", "Privado") }
+        paso("Visibilidad pública") { marcarOpcion(grupos(page)[4], "1", "público") }
 
         paso("Casilla de términos") { marcarTerminos(page) }
 
@@ -287,15 +293,15 @@ class SubidorMakeroad(
 
         if (revisar) {
             ventana?.mostrar()
-            val guardar = try {
+            val publicar = try {
                 revision.confirmar(m.name())
             } finally {
                 ventana?.apartar()
             }
-            if (!guardar) throw Descartado()
+            if (!publicar) throw Descartado()
         }
         cancelacion.comprobar() // último punto seguro
-        paso("Guardar (\"Registrar\": borrador, privado)") { guardar(page, revisar) }
+        paso("Publicar (público)") { publicar(page, revisar) }
     }
 
     // ------------------------------------------------------------------ campos
@@ -393,30 +399,36 @@ class SubidorMakeroad(
         page.keyboard().press("Escape")
     }
 
-    /** La casilla "Entiendo y acepto subir mi trabajo…", si está y no está marcada. */
+    /** La casilla "Entiendo y acepto subir mi trabajo a MakeRoad…": sin ella no deja publicar. */
     private fun marcarTerminos(page: Page) {
         val casilla = page.locator("label.arco-checkbox").filter(
             Locator.FilterOptions().setHasText(Pattern.compile("MakeRoad", Pattern.CASE_INSENSITIVE))
         ).first()
-        if (casilla.count() == 0) {
-            progreso.nota("no encuentro la casilla de términos: se guarda sin marcarla")
-            return
-        }
+        if (casilla.count() == 0) throw IllegalStateException("no encuentro la casilla de los términos de la plataforma")
         val entrada = casilla.locator("input").first()
         if (entrada.count() > 0 && !entrada.isChecked) casilla.click()
+        if (entrada.count() > 0 && !entrada.isChecked) throw IllegalStateException("no se queda marcada la casilla de los términos")
     }
 
     /**
-     * Pulsa "Registrar" (el primer `div.layout-btn`: guarda en borradores) y espera el aviso de que se
-     * ha guardado. Nunca pulsa "Publicar".
+     * Pulsa "Publicar" (el tercer `div.layout-btn`, tras "Registrar" y "Avance") y espera el aviso de
+     * que se ha enviado. El botón empieza desactivado (clase `disabled`) y se activa cuando el
+     * formulario está completo: si no se activa, se dice por qué y no se pulsa nada.
      */
-    private fun guardar(page: Page, revisar: Boolean) {
+    private fun publicar(page: Page, revisar: Boolean) {
         val botones = page.locator("div.layout-btn")
         if (botones.count() < 3) throw IllegalStateException("no encuentro los botones de abajo (Registrar / Avance / Publicar)")
-        val boton = botones.first()
+        val boton = botones.nth(2)
         val texto = boton.innerText().trim()
-        if (Regex("publi", RegexOption.IGNORE_CASE).containsMatchIn(texto)) {
-            throw IllegalStateException("el primer botón es \"$texto\": no se pulsa por si publica")
+        if (!Regex("publi|publish", RegexOption.IGNORE_CASE).containsMatchIn(texto)) {
+            throw IllegalStateException("el tercer botón es \"$texto\" y no \"Publicar\": no se pulsa nada")
+        }
+        val activo = System.currentTimeMillis() + 15_000L
+        while ("disabled" in (boton.getAttribute("class") ?: "").split(" ")) {
+            if (System.currentTimeMillis() > activo) {
+                throw IllegalStateException("el botón \"$texto\" sigue desactivado: falta algo en el formulario. Avisos: ${avisosSeguros(page)}")
+            }
+            page.waitForTimeout(500.0)
         }
         boton.click()
         val limite = System.currentTimeMillis() + (if (revisar) 5 * 60_000L else 90_000L)
@@ -424,14 +436,14 @@ class SubidorMakeroad(
             cancelacion.comprobar()
             page.waitForTimeout(500.0)
             val avisos = page.locator(".arco-message").locator("visible=true").allInnerTexts().map { it.trim() }
-            if (avisos.any { GUARDADO.containsMatchIn(it) }) return
+            if (avisos.any { ENVIADO.containsMatchIn(it) }) return
             val malo = page.locator(".arco-message-error, .arco-message-warning, .arco-form-item-message")
                 .locator("visible=true").allInnerTexts().map { it.trim() }.filter { it.isNotEmpty() }
-            if (malo.isNotEmpty()) throw IllegalStateException("Makeroad no lo guarda: ${malo.joinToString(" | ")}")
+            if (malo.isNotEmpty()) throw IllegalStateException("Makeroad no lo publica: ${malo.joinToString(" | ")}")
             if (hayCaptcha(page) && !revisar) throw ConCaptcha()
             if (System.currentTimeMillis() > limite) {
                 throw IllegalStateException(
-                    "he pulsado \"$texto\", pero no ha salido el aviso de guardado. Mira en tus borradores de Makeroad si está antes de repetir"
+                    "he pulsado \"$texto\", pero no ha salido el aviso de \"Enviado para revisión\". Mira en tus modelos de Makeroad si está antes de repetir"
                 )
             }
         }
@@ -490,17 +502,17 @@ class SubidorMakeroad(
         /** El formulario de subida (comprobado el 17/11/2026). */
         const val FORMULARIO = "$WEB/spa/printable_3D_model/upload"
 
-        /** Dentro de la carpeta del modelo: lo guardado en Makeroad (dirección y fecha). */
+        /** Dentro de la carpeta del modelo: lo publicado en Makeroad (dirección y fecha). */
         const val REGISTRO = "subido-makeroad.txt"
         const val CAPTURA_OK = "resultado-makeroad.png"
         const val CAPTURA_ERROR = "error-makeroad.png"
         const val ERROR_TXT = "error-makeroad.txt"
 
         /**
-         * El aviso al guardar: "Guardado e…" en español y "Saved Successfully" en inglés (textos
-         * `toasts.saveSuccess` del código de la web, vistos el 17/11/2026).
+         * El aviso al publicar: "Enviado para revisión" en español y "Submitted for Review" en inglés
+         * (`toasts.submitSuccess` del código de la web, visto el 17/11/2026).
          */
-        private val GUARDADO = Regex("guardado|saved|保存成功|已保存", RegexOption.IGNORE_CASE)
+        private val ENVIADO = Regex("enviado para revisi|submitted for review|eingereicht", RegexOption.IGNORE_CASE)
 
         private val FECHA = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 

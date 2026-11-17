@@ -51,7 +51,7 @@ tasks.register<JavaExec>("diagnosticoMakeroad") {
 // "Subir a Makeroad (revisar)": .\gradlew.bat :core:subirMakeroad --args="--revisar"
 tasks.register<JavaExec>("subirMakeroad") {
     group = "jujamaker"
-    description = "Guarda en Makeroad (borrador, privado) las carpetas de pendientes/"
+    description = "Publica en Makeroad (público; pasa por su revisión) las carpetas de pendientes/"
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("dev.jefe.makeronline.SubidorMakeroad")
     workingDir = rootDir

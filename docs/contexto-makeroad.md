@@ -20,7 +20,7 @@ Rama: `makeroad` (sale de `printables`). Objetivo: que JujaMaker suba a **Makero
 | Pieza | Qué hace |
 |---|---|
 | `core/.../DiagnosticoMakeroad.kt` (+ `.run`, tarea `:core:diagnosticoMakeroad`) | Mira si el Chrome de la app llega al formulario, si hay captcha y, si quieres, apunta una subida hecha a mano |
-| `core/.../SubidorMakeroad.kt` (+ `.run` "Subir a Makeroad (revisar)", tarea `:core:subirMakeroad`) | Rellena el formulario y lo **guarda** ("Registrar" = borrador) y **privado**. Nunca publica |
+| `core/.../SubidorMakeroad.kt` (+ `.run` "Subir a Makeroad (revisar)", tarea `:core:subirMakeroad`) | Rellena el formulario y lo **publica como público** ("Publicar"). Makeroad responde "Enviado para revisión" |
 | `core/.../CatalogoMakeroad.kt` | Categorías de la web y equivalencias desde las de MakerOnline; límites |
 | `Rutas.deLaApp()` | Los programas de terminal de Makeroad usan la carpeta de datos de la app (`%LOCALAPPDATA%\MakerOnline Desktop`): sus carpetas y su sesión de Chrome |
 | `ModelFolder` | Ignora `subido-makeroad.txt`, `resultado-makeroad.png`, `error-makeroad.*` |
@@ -46,18 +46,26 @@ Rama: `makeroad` (sale de `printables`). Objetivo: que JujaMaker suba a **Makero
 - **Información del modelo**: casillas "Este es mi modelo original", "segundo modelo", "creado por IA", "NSFW" (`span.work-type-text`): no se tocan.
 - **Licencia**: tres grupos (compartir sin atribución: Sí=2/No=1; modificar y compartir: Sí=2/No=1/igual licencia=3;
   uso comercial: Sí=2/No=1). Por defecto No/No/No ("CC BY-ND"). Se pone **Sí a las tres** (lo más parecido a CC0, como en Creality).
-- **Visibilidad**: público=1 / **Privado=2**. Precio: Gratis. Hay "Lanzamiento programado".
-- **Términos**: "Entiendo y acepto subir mi trabajo a MakeRoad…".
+- **Visibilidad**: **público=1** / Privado=2. Precio: Gratis. Hay "Lanzamiento programado".
+- **Términos**: "Entiendo y acepto subir mi trabajo a MakeRoad…". Obligatoria para publicar
+  (`toasts.agreementRequired`: "Por favor, acepte primero los términos de la plataforma.").
 - **Botones** (`div.layout-btn`, por orden): **"Registrar"** (en el código de la web `buttons.save`; en inglés "Save":
   guarda en borradores), "Avance" (vista previa) y "Publicar" (desactivado hasta que todo está bien).
-- Aviso al guardar: `toasts.saveSuccess` ("Guardado e…" / "Saved Successfully").
+- Aviso al guardar: `toasts.saveSuccess` ("Guardado exitosamente" / "Saved Successfully").
+- Aviso al publicar: `toasts.submitSuccess` (**"Enviado para revisión"** / "Submitted for Review"): Makeroad lo modera antes de enseñarlo.
+
+## Decisión: publicar directamente (17/11/2026)
+
+A petición de la persona, a Makeroad se **publica como público** (botón "Publicar"), no se guarda como borrador:
+es la excepción a la regla del proyecto. Por eso las carpetas con menos de 3 fotos no se suben (Makeroad no deja
+publicar con menos) y la casilla de términos es obligatoria. Con `--revisar` se para antes de publicar cada uno.
 - API (de su código, sin usar): `/models/info`, `/models/work`, `/models/getEdit`, `/upload/ossurl`… La sesión va con
   una cabecera de token (`/api/user` sin ella responde `code 50001`).
 
 ## Pendiente
 
 - [ ] Iniciar sesión en Makeroad en el Chrome de la app (una vez; la ventana del diagnóstico sirve).
-- [ ] Primera subida con **"Subir a Makeroad (revisar)"** y una carpeta de prueba: ver si sale el captcha al guardar,
-      si el aviso de guardado coincide y si hace falta la casilla de términos. Anotarlo aquí.
+- [ ] Primera subida con **"Subir a Makeroad (revisar)"** y una carpeta de prueba: ver si sale el captcha al publicar,
+      si "Publicar" se activa con todo relleno y si el aviso "Enviado para revisión" coincide. Anotarlo aquí.
 - [ ] Si va bien: integrarlo en la app (enum `Web`, `Sesion`, `SubidaMultiple`, pantallas), como Creality.
       Ojo: la rama `nexprint` también añade una web al enum: mejor juntarlas antes.
