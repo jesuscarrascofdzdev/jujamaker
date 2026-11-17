@@ -13,7 +13,7 @@ import java.util.Locale
  * Cada una deja en la carpeta del modelo su archivo de "ya subido" ([registro]) y, si falla, su
  * archivo de error ([errorTxt]).
  *
- * **Cuándo se retira una carpeta de pendientes/** (pedido por la persona el 17/11/2026): solo cuando
+ * **Cuándo se retira una carpeta de pendientes** (pedido por la persona el 17/11/2026): solo cuando
  * está en **todas** las páginas que se eligieron al subirla. Al pulsar Subir se apuntan en
  * `destinos.txt` dentro de la carpeta ([apuntar]); cada vez que una página termina se mira
  * [retirarSiCompleta]. Así lo que falle (o lo que falte de Printables, que va aparte con la
