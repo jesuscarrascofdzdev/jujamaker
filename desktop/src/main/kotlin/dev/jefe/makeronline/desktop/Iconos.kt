@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+import dev.jefe.makeronline.Destino
 import dev.jefe.makeronline.Web
 
 /**
@@ -83,6 +84,14 @@ object Iconos {
     fun de(web: Web): ImageVector = when (web) {
         Web.MAKERONLINE -> cubo
         Web.CREALITY -> nube
+    }
+
+    /** El icono de cada página de la pantalla Subir. */
+    fun de(d: Destino): ImageVector = when (d) {
+        Destino.MAKERONLINE -> cubo
+        Destino.CREALITY -> nube
+        Destino.PRINTABLES -> globo
+        Destino.MAKEROAD -> subir
     }
 
     /** Dos eslabones (Conectar con Claude). */

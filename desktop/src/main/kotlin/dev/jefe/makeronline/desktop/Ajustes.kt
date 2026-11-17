@@ -1,5 +1,6 @@
 package dev.jefe.makeronline.desktop
 
+import dev.jefe.makeronline.Destino
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
@@ -64,6 +65,27 @@ class Ajustes(private val archivo: Path) {
             valores.setProperty(SUBIR_CREALITY, v.toString())
             guardar()
         }
+
+    /**
+     * En Subir, si está marcada esa página. Por defecto MakerOnline y Creality sí (como antes) y
+     * Printables y Makeroad no (llegaron después: que nadie suba allí sin querer).
+     */
+    fun subirA(d: Destino): Boolean = when (d) {
+        Destino.MAKERONLINE -> subirMakerOnline
+        Destino.CREALITY -> subirCreality
+        else -> valores.getProperty(SUBIR_A + d.name)?.toBooleanStrictOrNull() ?: false
+    }
+
+    fun subirA(d: Destino, si: Boolean) {
+        when (d) {
+            Destino.MAKERONLINE -> subirMakerOnline = si
+            Destino.CREALITY -> subirCreality = si
+            else -> {
+                valores.setProperty(SUBIR_A + d.name, si.toString())
+                guardar()
+            }
+        }
+    }
 
     /** En Descargar, cuántos de los últimos modelos de cada usuario se miran (por defecto, 10, como en la terminal). */
     var ultimosModelos: Int
@@ -171,6 +193,8 @@ class Ajustes(private val archivo: Path) {
         const val VER_CHROME_AL_SUBIR = "verChromeAlSubir"
         const val SUBIR_MAKERONLINE = "subirMakerOnline"
         const val SUBIR_CREALITY = "subirCreality"
+        /** + el nombre de la página: "subirA.PRINTABLES", "subirA.MAKEROAD". */
+        const val SUBIR_A = "subirA."
         const val ULTIMOS_MODELOS = "ultimosModelos"
         const val MAXIMO_DESCARGAS = "maximoDescargas"
         const val DESCARGAR_MAKERONLINE = "descargarMakerOnline"

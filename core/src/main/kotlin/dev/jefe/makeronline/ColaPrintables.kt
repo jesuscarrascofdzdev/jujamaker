@@ -21,7 +21,7 @@ import java.util.Locale
  * da esta cola. La app no sube nada a Printables.
  *
  * Están en la cola las carpetas válidas que no tienen `subido-printables.txt` y que la persona ha metido
- * en la app: las de pendientes/ y, de subidos/, solo las que pasaron antes por pendientes/ (al subir a
+ * en la app: las de pendientes/ a las que se eligió subir a Printables (pantalla Subir, `destinos.txt`) y, de subidos/, solo las que pasaron antes por pendientes/ (al subir a
  * MakerOnline la carpeta pasa a subidos/, y desde ahí se sigue pudiendo subir a Printables cuando
  * quieras). Las que ya estaban en subidos/ de antes (subidas a MakerOnline hace tiempo) no entran: para
  * saberlo, las carpetas que se ven en pendientes/ se apuntan en printables-vistas.txt
@@ -75,6 +75,11 @@ class ColaPrintables(private val rutas: Rutas) {
         var subidas = 0
         for ((donde, dir) in carpetas()) {
             val clave = "$donde/${dir.fileName}"
+            // Desde el 17/11/2026 se elige en Subir a qué páginas va cada carpeta (destinos.txt): las de
+            // pendientes/ solo entran si se eligió Printables; las de subidos/ sin destinos.txt (de antes) siguen entrando
+            val destinos = Destino.leer(dir)
+            val conPrintables = destinos?.contains(Destino.PRINTABLES)
+            if (if (donde == PENDIENTES) conPrintables != true else conPrintables == false) continue
             if (yaSubido(dir)) {
                 subidas++
                 continue
@@ -166,6 +171,8 @@ class ColaPrintables(private val rutas: Rutas) {
             dir.resolve(REGISTRO),
             "$modelo\t${direccionModelo(modelo)}\t${LocalDateTime.now().format(FECHA)}\n",
         )
+        // Si era la última página que le faltaba, sale de pendientes/ (ver Destino.retirarSiCompleta)
+        if (clave.startsWith("$PENDIENTES/")) Destino.retirarSiCompleta(rutas, dir)
     }
 
     /**

@@ -42,7 +42,9 @@ public record ModelFolder(Path dir, String name, List<Path> modelos, List<Path> 
             // el que deja la extensión de Printables (ver ColaPrintables; los demás, por si acaso)
             "subido-printables.txt", "resultado-printables.png", "error-printables.png", "error-printables.txt",
             // los que deja SubidorMakeroad
-            "subido-makeroad.txt", "resultado-makeroad.png", "error-makeroad.png", "error-makeroad.txt");
+            "subido-makeroad.txt", "resultado-makeroad.png", "error-makeroad.png", "error-makeroad.txt",
+            // los de la subida a varias páginas (ver Destino y Uploader con mover = false)
+            "destinos.txt", "subido-makeronline.txt", "error-makeronline.txt");
     private static final Set<String> NOMBRES_PORTADA = Set.of("portada", "cover");
     private static final Comparator<Path> POR_NOMBRE =
             Comparator.comparing(p -> p.getFileName().toString().toLowerCase(Locale.ROOT));

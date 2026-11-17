@@ -78,3 +78,18 @@ perfil de Chrome de la app.
       si "Publicar" se activa con todo relleno y si el aviso "Enviado para revisión" coincide. Anotarlo aquí.
 - [ ] Si va bien: integrarlo en la app (enum `Web`, `Sesion`, `SubidaMultiple`, pantallas), como Creality.
       Ojo: la rama `nexprint` también añade una web al enum: mejor juntarlas antes.
+
+## Subida unificada (17/11/2026)
+
+Pedido por la persona: un solo botón Subir y una ficha por página (MakerOnline, Creality, Printables,
+Makeroad) que se marca o desmarca (se recuerda en ajustes). Lo hace `SubidaMultiple` con el enum
+`Destino` (va aparte de `Web`, que es sesión/descargas):
+
+- Al pulsar Subir se apunta en cada carpeta `destinos.txt` (las páginas elegidas).
+- Orden: Creality → Makeroad → MakerOnline (el Uploader con `mover=false`: deja
+  `subido-makeronline.txt` o `error-makeronline.txt` y **no** mueve). Printables: las carpetas quedan
+  en la cola de la extensión y la app abre su formulario al terminar.
+- Una carpeta pasa a subidos/ solo cuando está en **todas** sus páginas (`Destino.retirarSiCompleta`):
+  al final de la subida y cuando la extensión apunta Printables (`ColaPrintables.anotarSubido`).
+- La cola de Printables solo coge de pendientes/ las carpetas con PRINTABLES en `destinos.txt`.
+- El botón suelto "Publicar en Makeroad" ya no existe.

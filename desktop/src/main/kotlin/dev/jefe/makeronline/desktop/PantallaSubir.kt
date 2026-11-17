@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.jefe.makeronline.ColaPrintables
+import dev.jefe.makeronline.Destino
 import dev.jefe.makeronline.Rutas
 import dev.jefe.makeronline.Web
 import kotlinx.coroutines.CoroutineScope
@@ -167,12 +168,11 @@ fun PantallaSubir(
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     PanelRevision(s)
-                    // Arriba, para que se vea sin tener que bajar: Printables va aparte (con la extensión)
-                    PanelPrintables(printables)
-                    PanelMakeroad(s, alcance)
                     PanelSubirAhora(s, alcance, irASesion)
                     PanelProgresoSubida(s)
                     PanelResumenSubida(s, rutas)
+                    // Printables lo sube la extensión en tu Chrome: aquí se ve cómo va su cola
+                    if (s.marcada(Destino.PRINTABLES) || printables.porSubir > 0) PanelPrintables(printables)
                     s.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     PanelFormato()
                 }
@@ -192,9 +192,9 @@ private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope, irASesion:
     Tarjeta(espacio = 8.dp) {
         Text(Textos.SUBIR_AHORA, style = MaterialTheme.typography.titleMedium)
         Text(Textos.DONDE_SUBIR, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
-        for (fila in Web.entries.chunked(2)) {
+        for (fila in Destino.entries.chunked(2)) {
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (web in fila) FichaWeb(s, web, editable, irASesion, Modifier.weight(1f).fillMaxHeight())
+                for (d in fila) FichaWeb(s, d, editable, irASesion, Modifier.weight(1f).fillMaxHeight())
                 if (fila.size == 1) Spacer(Modifier.weight(1f))
             }
         }
@@ -210,7 +210,7 @@ private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope, irASesion:
         Casilla(Textos.REVISAR, s.revisar, editable) { s.revisar = it }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BotonPrincipal(
-                Textos.botonSubir(s.websQueSuben()),
+                Textos.botonSubir(s.destinosQueSuben()),
                 { alcance.launch { s.subir() } },
                 Modifier.weight(1f),
                 enabled = s.libre && !s.copiando,
@@ -227,32 +227,9 @@ private fun PanelSubirAhora(s: EstadoSubida, alcance: CoroutineScope, irASesion:
             BotonSecundario(
                 Textos.CREALITY_SUBIDOS_BOTON,
                 { alcance.launch { s.subirSubidosACreality() } },
-                enabled = s.libre && !s.copiando && s.disponible(Web.CREALITY),
+                enabled = s.libre && !s.copiando && s.disponible(Destino.CREALITY),
             )
         }
-    }
-}
-
-/**
- * Makeroad: se publica con el Chrome de la app, como Creality, pero con su propio botón porque aún no
- * está en [Web] (ver SubidorMakeroad). Usa las carpetas, "Ver Chrome" y "Revisar" de "Subir ahora".
- */
-@Composable
-private fun PanelMakeroad(s: EstadoSubida, alcance: CoroutineScope) {
-    val n = if (s.soloSeleccionada) (if (s.seleccionada != null) 1 else 0) else s.carpetas.count { it.valida }
-    Tarjeta(espacio = 8.dp) {
-        Text(Textos.MR_TITULO, style = MaterialTheme.typography.titleMedium)
-        Text(Textos.MR_EXPLICACION, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BotonPrincipal(
-                Textos.mrBoton(n),
-                { alcance.launch { s.subirAMakeroad() } },
-                Modifier.weight(1f),
-                enabled = s.libre && !s.copiando && n > 0,
-            )
-            BotonParar(Textos.PARAR, { s.parar() }, enabled = s.enMarcha && !s.parando)
-        }
-        Text(Textos.MR_AYUDA, style = MaterialTheme.typography.bodySmall, color = Colores.textoSuave)
     }
 }
 
@@ -261,7 +238,7 @@ private fun PanelMakeroad(s: EstadoSubida, alcance: CoroutineScope) {
  * con el borde de rayas, el motivo y un enlace a la pantalla Sesión.
  */
 @Composable
-private fun FichaWeb(s: EstadoSubida, web: Web, editable: Boolean, irASesion: () -> Unit, modifier: Modifier) {
+private fun FichaWeb(s: EstadoSubida, web: Destino, editable: Boolean, irASesion: () -> Unit, modifier: Modifier) {
     val forma = RoundedCornerShape(10.dp)
     val estiloNombre = MaterialTheme.typography.bodyMedium
     val pequeno = MaterialTheme.typography.bodySmall
@@ -480,7 +457,7 @@ private fun InsigniaWeb(i: Insignia) {
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Icon(Iconos.de(i.web), contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
-        Text(Textos.insignia(i.web, i.estado), style = MaterialTheme.typography.bodySmall, color = color)
+        Text(Textos.insignia(i.destino, i.estado), style = MaterialTheme.typography.bodySmall, color = color)
     }
 }
 
@@ -613,49 +590,30 @@ private fun PanelProgresoSubida(s: EstadoSubida) {
 private fun PanelResumenSubida(s: EstadoSubida, rutas: Rutas) {
     val r = s.resumen ?: return
     val pequeno = MaterialTheme.typography.bodySmall
-    val creality = r.creality
-    val makerOnline = r.makerOnline
-    val conError = makerOnline?.carpetasConError().orEmpty()
     Tarjeta(espacio = 10.dp) {
         Text(Textos.ULTIMA_SUBIDA, style = MaterialTheme.typography.titleMedium)
         if (r.parado) Text(Textos.RESUMEN_SUBIDA_PARADA, style = MaterialTheme.typography.titleSmall)
         Column {
             FilaTabla(Textos.TABLA_WEB, Textos.TABLA_SUBIDOS, Textos.TABLA_CON_ERROR, Textos.TABLA_SIN_SUBIR, cabecera = true)
-            // Las que solo tienen .stl cuentan como "sin subir" en Creality (y se dice cuáles debajo)
-            if (creality != null || r.sin3mf.isNotEmpty()) {
-                FilaTabla(
-                    Web.CREALITY.nombre,
-                    (creality?.subidos ?: 0).toString(),
-                    (creality?.conError ?: 0).toString(),
-                    ((creality?.sinSubir ?: 0) + r.sin3mf.size).toString(),
-                )
-            }
-            if (makerOnline != null || r.sinMakerOnline.isNotEmpty()) {
-                FilaTabla(
-                    Web.MAKERONLINE.nombre,
-                    (makerOnline?.subidos() ?: 0).toString(),
-                    ((makerOnline?.conError() ?: 0) + (makerOnline?.invalidos() ?: 0)).toString(),
-                    ((makerOnline?.sinSubir() ?: 0) + r.sinMakerOnline.size).toString(),
-                )
+            for ((d, c) in r.cuentas) {
+                // Las que solo tienen .stl cuentan como "sin subir" en Creality (y se dice cuáles debajo)
+                val sinSubir = c.sinSubir + (if (d == Destino.CREALITY) r.sin3mf.size else 0)
+                FilaTabla(d.nombre, c.subidos.toString(), c.conError.toString(), sinSubir.toString())
             }
         }
-        if (creality != null && creality.yaSubidos > 0) {
-            Text(Textos.yaEstabanEnCreality(creality.yaSubidos), style = pequeno, color = Colores.textoSuave)
+        for ((d, c) in r.cuentas) {
+            if (c.yaEstaban > 0) Text(Textos.yaEstaban(c.yaEstaban, d.nombre), style = pequeno, color = Colores.textoSuave)
         }
         if (r.sin3mf.isNotEmpty()) Text(Textos.sinCrealityPorStl(r.sin3mf), style = pequeno, color = Colores.ambarTexto)
-        if (r.sinMakerOnline.isNotEmpty()) Text(Textos.sinMakerOnline(r.sinMakerOnline), style = pequeno, color = Colores.ambarTexto)
-        if (r.aSubidos > 0) Text(Textos.pasanASubidos(r.aSubidos), style = pequeno, color = Colores.textoClaro)
-        Row {
-            if ((makerOnline?.subidos() ?: 0) > 0 || r.aSubidos > 0) BotonEnlace(Textos.ABRIR_SUBIDOS, { abrir(rutas.subidos) })
-            if (conError.isNotEmpty()) BotonEnlace(Textos.ABRIR_ERRORES, { abrir(rutas.errores) })
+        if (r.paraPrintables.isNotEmpty()) {
+            Text(Textos.paraPrintables(r.paraPrintables.size), style = pequeno, color = Colores.textoClaro)
+            BotonEnlace(Textos.PR_ABRIR, { abrirEnNavegador(ColaPrintables.FORMULARIO_SEGUIDO) })
         }
-        if ((creality?.conError ?: 0) > 0) Text(Textos.ERRORES_CREALITY_EN_LISTA, style = pequeno, color = Colores.textoSuave)
-        for (carpeta in conError) {
-            // La captura si la hay (falló al subir); si no, el error.txt (no era válida)
-            val captura = carpeta.resolve("error.png")
-            val archivo = if (Files.exists(captura)) captura else carpeta.resolve("error.txt")
-            BotonEnlace(Textos.verError(carpeta.fileName.toString()), { abrir(archivo) })
+        if (r.retiradas > 0) {
+            Text(Textos.pasanASubidos(r.retiradas), style = pequeno, color = Colores.textoClaro)
+            BotonEnlace(Textos.ABRIR_SUBIDOS, { abrir(rutas.subidos) })
         }
+        if (r.cuentas.values.any { it.conError > 0 }) Text(Textos.ERRORES_EN_LISTA, style = pequeno, color = Colores.textoSuave)
     }
 }
 
