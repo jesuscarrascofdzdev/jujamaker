@@ -416,10 +416,16 @@ class SubidorMakeroad(
         if (grupo.count() == 0) throw IllegalStateException("no encuentro el grupo \"${c.grupo}\"")
         val titulo = grupo.locator(".brand-title").first()
         if ("on" !in (titulo.getAttribute("class") ?: "").split(" ")) titulo.click()
-        val opcion = grupo.locator(".option-item").filter(
-            Locator.FilterOptions().setHasText(Pattern.compile("^\\W*" + Pattern.quote(c.opcion) + "\\W*$"))
-        ).first()
-        if (opcion.count() == 0) throw IllegalStateException("no encuentro \"${c.opcion}\" en \"${c.grupo}\"")
+        // Se compara el texto tal cual (sin espacios ni los caracteres invisibles \u200b que lleva la web).
+        // Con una expresión regular hecha con Pattern.quote no se encontraba: Playwright la pasa al
+        // navegador y JavaScript no entiende \Q…\E (pasó el 17/11/2026)
+        val opciones = grupo.locator(".option-item")
+        val textos = opciones.allInnerTexts().map { it.replace("\u200b", "").trim() }
+        val indice = textos.indexOfFirst { it.equals(c.opcion, ignoreCase = true) }
+        if (indice < 0) {
+            throw IllegalStateException("no encuentro \"${c.opcion}\" en \"${c.grupo}\" (hay: ${textos.joinToString(", ")})")
+        }
+        val opcion = opciones.nth(indice)
         opcion.click() // cada modelo empieza en un formulario nuevo: no hay nada marcado antes
         modal.locator(".confirm-btn").first().click()
         try {
