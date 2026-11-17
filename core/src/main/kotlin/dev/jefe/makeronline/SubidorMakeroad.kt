@@ -114,11 +114,6 @@ class SubidorMakeroad(
             }
             try {
                 val m = ModelFolder.load(dir)
-                if (m.imagenes().size < CatalogoMakeroad.MIN_FOTOS) {
-                    progreso.error("${dir.fileName}: tiene ${m.imagenes().size} foto(s) y Makeroad pide al menos ${CatalogoMakeroad.MIN_FOTOS} para publicar")
-                    sinSubir++
-                    continue
-                }
                 listos += m
                 progreso.correcto("${dir.fileName} validado")
             } catch (e: Exception) {
@@ -246,7 +241,7 @@ class SubidorMakeroad(
             esperarSubidas(page, "los archivos del modelo")
         }
 
-        val fotos = (listOf(m.portada()) + m.imagenes().filter { it != m.portada() }).take(CatalogoMakeroad.MAX_FOTOS)
+        val fotos = fotosParaMakeroad(m)
         paso("Fotos (${fotos.size})") {
             page.locator("input[type=file][accept^='.jpg']").first().setInputFiles(fotos.toTypedArray())
             esperarSubidas(page, "las fotos")
@@ -325,6 +320,32 @@ class SubidorMakeroad(
         } finally {
             ventana?.apartar()
         }
+    }
+
+    /**
+     * Las fotos que se suben: la portada primero y luego las demás, hasta [CatalogoMakeroad.MAX_FOTOS].
+     * Makeroad pide al menos [CatalogoMakeroad.MIN_FOTOS] para publicar: si la carpeta tiene menos, se
+     * repiten (la portada primero) hasta llegar, a petición de la persona (17/11/2026). Las repetidas van
+     * como copias con otro nombre en una carpeta temporal, para que la web no las tome por la misma.
+     */
+    private fun fotosParaMakeroad(m: ModelFolder): List<Path> {
+        val propias = (listOf(m.portada()) + m.imagenes().filter { it != m.portada() }).take(CatalogoMakeroad.MAX_FOTOS)
+        if (propias.size >= CatalogoMakeroad.MIN_FOTOS) return propias
+        val temporal = Files.createTempDirectory("jujamaker-makeroad")
+        temporal.toFile().deleteOnExit()
+        val todas = ArrayList(propias)
+        var i = 0
+        while (todas.size < CatalogoMakeroad.MIN_FOTOS) {
+            val original = propias[i % propias.size]
+            val nombre = original.fileName.toString()
+            val copia = temporal.resolve(nombre.substringBeforeLast('.') + "-" + (todas.size + 1) + "." + nombre.substringAfterLast('.'))
+            Files.copy(original, copia, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            copia.toFile().deleteOnExit()
+            todas += copia
+            i++
+        }
+        progreso.nota("la carpeta tiene ${propias.size} foto(s) y Makeroad pide ${CatalogoMakeroad.MIN_FOTOS}: se repite${if (propias.size == 1) " la misma" else "n"} hasta llegar")
+        return todas
     }
 
     // ------------------------------------------------------------------ campos

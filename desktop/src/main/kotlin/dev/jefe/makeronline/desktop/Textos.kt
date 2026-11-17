@@ -401,7 +401,7 @@ object Textos {
     const val MR_TITULO = "Makeroad"
     const val MR_EXPLICACION =
         "Publica en Makeroad como público las mismas carpetas (todas las válidas o solo la seleccionada, según " +
-            "\"Subir ahora\"). Makeroad revisa cada modelo antes de enseñarlo. Necesita al menos 3 fotos por carpeta; " +
+            "\"Subir ahora\"). Makeroad revisa cada modelo antes de enseñarlo. Pide 3 fotos: si la carpeta tiene menos, se repiten; " +
             "las que ya están en Makeroad no se vuelven a subir."
     const val MR_AYUDA =
         "La primera vez, Makeroad te pedirá iniciar sesión en la ventana de Chrome que se abre. Con \"Revisar\" " +

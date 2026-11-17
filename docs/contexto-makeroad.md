@@ -57,8 +57,8 @@ Rama: `makeroad` (sale de `printables`). Objetivo: que JujaMaker suba a **Makero
 ## Decisión: publicar directamente (17/11/2026)
 
 A petición de la persona, a Makeroad se **publica como público** (botón "Publicar"), no se guarda como borrador:
-es la excepción a la regla del proyecto. Por eso las carpetas con menos de 3 fotos no se suben (Makeroad no deja
-publicar con menos) y la casilla de términos es obligatoria. Con `--revisar` se para antes de publicar cada uno.
+es la excepción a la regla del proyecto. Makeroad no deja publicar con menos de 3 fotos: si la carpeta tiene menos, se repiten
+(la portada primero) hasta llegar a 3, también a petición de la persona y la casilla de términos es obligatoria. Con `--revisar` se para antes de publicar cada uno.
 - API (de su código, sin usar): `/models/info`, `/models/work`, `/models/getEdit`, `/upload/ossurl`… La sesión va con
   una cabecera de token (`/api/user` sin ella responde `code 50001`).
 
