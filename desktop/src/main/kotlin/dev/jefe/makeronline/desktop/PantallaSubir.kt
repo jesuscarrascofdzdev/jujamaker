@@ -456,7 +456,7 @@ private fun InsigniaWeb(i: Insignia) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(Iconos.de(i.web), contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+        Icon(Iconos.de(i.destino), contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
         Text(Textos.insignia(i.destino, i.estado), style = MaterialTheme.typography.bodySmall, color = color)
     }
 }
