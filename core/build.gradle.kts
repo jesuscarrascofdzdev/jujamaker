@@ -35,3 +35,26 @@ tasks.register<JavaExec>("diagnosticoPrintables") {
     standardInput = System.`in`
     jvmArgs("-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8")
 }
+
+// "Diagnóstico de Makeroad": .\gradlew.bat :core:diagnosticoMakeroad
+// Mira si el Chrome de la app llega al formulario de Makeroad y, si quieres, apunta una subida hecha a mano.
+tasks.register<JavaExec>("diagnosticoMakeroad") {
+    group = "jujamaker"
+    description = "Mira si el Chrome de la app entra en Makeroad y apunta su formulario"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("dev.jefe.makeronline.DiagnosticoMakeroad")
+    workingDir = rootDir
+    standardInput = System.`in`
+    jvmArgs("-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8")
+}
+
+// "Subir a Makeroad (revisar)": .\gradlew.bat :core:subirMakeroad --args="--revisar"
+tasks.register<JavaExec>("subirMakeroad") {
+    group = "jujamaker"
+    description = "Guarda en Makeroad (borrador, privado) las carpetas de pendientes/"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("dev.jefe.makeronline.SubidorMakeroad")
+    workingDir = rootDir
+    standardInput = System.`in`
+    jvmArgs("-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8")
+}

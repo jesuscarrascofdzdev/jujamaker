@@ -86,5 +86,18 @@ class Rutas @JvmOverloads constructor(
         /** La carpeta desde la que se lanza el programa: lo de siempre en la versión de terminal. */
         @JvmStatic
         fun carpetaActual(): Rutas = Rutas(Path.of(""))
+
+        /**
+         * La carpeta de datos de la app de escritorio, para los programas de terminal que tienen que
+         * trabajar con las carpetas y la sesión de Chrome de la app (Makeroad): la de
+         * -Dmakeronline.datos si se da; si no, en Windows %LOCALAPPDATA%\MakerOnline Desktop (la de
+         * CarpetaDatos, en desktop) si existe; si no, la carpeta desde la que se lanza.
+         */
+        @JvmStatic
+        fun deLaApp(): Rutas {
+            System.getProperty("makeronline.datos")?.takeIf { it.isNotBlank() }?.let { return Rutas(Path.of(it)) }
+            val local = System.getenv("LOCALAPPDATA")?.takeIf { it.isNotBlank() }?.let { Path.of(it, "MakerOnline Desktop") }
+            return if (local != null && java.nio.file.Files.isDirectory(local)) Rutas(local) else carpetaActual()
+        }
     }
 }
