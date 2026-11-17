@@ -451,29 +451,100 @@ class SubidorMakeroad(
         }
     }
 
+    /**
+     * Las etiquetas: es un desplegable de Arco con casillas (placeholder "Por favor seleccione o ingrese
+     * una etiqueta"). Escribir y pulsar ENTER no las añade (visto el 17/11/2026): hay que marcar la
+     * opción en la lista que sale al escribir. Por cada etiqueta: se escribe tecla a tecla, se espera la
+     * lista y se marca la opción que coincide (si no hay igual, la primera que la contiene). Si no sale
+     * ninguna, se prueba ENTER (por si la web deja crearla) y, si tampoco, se salta con un aviso.
+     * Al final se comprueba cuántas han quedado puestas.
+     */
     private fun escribirEtiquetas(page: Page, etiquetas: List<String>) {
         if (etiquetas.isEmpty()) return
-        val campo = page.locator("input.arco-select-view-input").first()
+        val campo = page.locator("input.arco-select-view-input[placeholder*='etiqueta' i], input.arco-select-view-input[placeholder*='tag' i]").first()
         if (campo.count() == 0) throw IllegalStateException("no encuentro el campo de etiquetas")
+        // El recuadro del desplegable, para contar las etiquetas puestas (cada una es un .arco-tag)
+        val vista = page.locator(".arco-select-view").filter(Locator.FilterOptions().setHas(campo)).first()
+        fun puestas(): Int = runCatching { vista.locator(".arco-tag").count() }.getOrDefault(0)
+        var saltadas = 0
         for (e in etiquetas) {
+            cancelacion.comprobar()
+            val antes = puestas()
             campo.click()
-            campo.fill(e)
+            campo.fill("")
+            campo.pressSequentially(e, Locator.PressSequentiallyOptions().setDelay(40.0))
+            page.waitForTimeout(1500.0) // la web busca las etiquetas que coinciden
+            val opciones = page.locator(".arco-select-dropdown .arco-select-option").locator("visible=true")
+            val textos = runCatching { opciones.allInnerTexts().map { it.replace("\u200b", "").trim() } }.getOrDefault(emptyList())
+            var indice = textos.indexOfFirst { it.equals(e, ignoreCase = true) }
+            if (indice < 0) indice = textos.indexOfFirst { it.contains(e, ignoreCase = true) }
+            if (indice >= 0) {
+                opciones.nth(indice).click()
+            } else {
+                campo.press("Enter")
+            }
             page.waitForTimeout(400.0)
-            campo.press("Enter")
-            page.waitForTimeout(300.0)
+            if (puestas() <= antes) {
+                saltadas++
+                progreso.nota("la etiqueta \"$e\" no está en la lista de Makeroad: no se pone")
+            }
+            campo.fill("")
         }
         page.keyboard().press("Escape")
+        page.waitForTimeout(300.0)
+        val total = puestas()
+        if (total == 0 && etiquetas.isNotEmpty()) progreso.nota("no se ha podido poner ninguna etiqueta (no son obligatorias)")
+        else if (saltadas > 0) progreso.nota("puestas $total de ${etiquetas.size} etiquetas")
     }
 
-    /** La casilla "Entiendo y acepto subir mi trabajo a MakeRoad…": sin ella no deja publicar. */
+    /**
+     * La casilla "Entiendo y acepto subir mi trabajo a MakeRoad…": sin ella no deja publicar. No es un
+     * checkbox de Arco sino una casilla hecha por la web, como la de FDM (que se marca pulsando su
+     * texto). Se pulsa al principio del texto (al final están los enlaces al acuerdo y a la privacidad,
+     * que no hay que abrir). Se comprueba después con el botón "Publicar", que solo se activa con todo bien.
+     */
     private fun marcarTerminos(page: Page) {
-        val casilla = page.locator("label.arco-checkbox").filter(
-            Locator.FilterOptions().setHasText(Pattern.compile("MakeRoad", Pattern.CASE_INSENSITIVE))
-        ).first()
-        if (casilla.count() == 0) throw IllegalStateException("no encuentro la casilla de los términos de la plataforma")
-        val entrada = casilla.locator("input").first()
-        if (entrada.count() > 0 && !entrada.isChecked) casilla.click()
-        if (entrada.count() > 0 && !entrada.isChecked) throw IllegalStateException("no se queda marcada la casilla de los términos")
+        val texto = page.getByText(Pattern.compile("Entiendo y acepto|I understand and agree", Pattern.CASE_INSENSITIVE)).first()
+        if (texto.count() == 0) throw IllegalStateException("no encuentro la casilla de los términos de la plataforma")
+        texto.scrollIntoViewIfNeeded()
+        // ¿Ya está marcada? (si su casilla o un contenedor cercano lo dice)
+        val marcada = texto.evaluate(
+            """e => {
+              let p = e;
+              for (let i = 0; i < 4 && p; i++, p = p.parentElement) {
+                const input = p.querySelector('input[type=checkbox]');
+                if (input) return input.checked;
+                if (/(^|[\s-])(checked|is-checked|active)(\s|$)/.test((p.className || '').toString())) return true;
+              }
+              return false;
+            }"""
+        ) as Boolean
+        if (!marcada) {
+            // El cuadrado de la casilla: un elemento pequeño (12-24 px) a la izquierda del texto, cerca de él
+            val cuadrado = texto.evaluate(
+                """e => {
+                  const t = e.getBoundingClientRect();
+                  let p = e;
+                  for (let i = 0; i < 4 && p; i++, p = p.parentElement) {
+                    for (const c of p.querySelectorAll('*')) {
+                      const r = c.getBoundingClientRect();
+                      if (r.width >= 12 && r.width <= 24 && r.height >= 12 && r.height <= 24 &&
+                          r.right <= t.left + 2 && t.left - r.right < 40 && Math.abs((r.top + r.height / 2) - (t.top + t.height / 2)) < 14) {
+                        return [r.left + r.width / 2, r.top + r.height / 2];
+                      }
+                    }
+                  }
+                  return null;
+                }"""
+            ) as List<*>?
+            if (cuadrado != null) {
+                page.mouse().click((cuadrado[0] as Number).toDouble(), (cuadrado[1] as Number).toDouble())
+            } else {
+                // Sin cuadrado aparte: se pulsa el comienzo del texto (como FDM)
+                texto.click(Locator.ClickOptions().setPosition(5.0, 8.0))
+            }
+            page.waitForTimeout(400.0)
+        }
     }
 
     /**
