@@ -404,10 +404,15 @@ object Textos {
             "\"Subir ahora\"). Makeroad revisa cada modelo antes de enseñarlo. Pide 3 fotos: si la carpeta tiene menos, se repiten; " +
             "las que ya están en Makeroad no se vuelven a subir."
     const val MR_AYUDA =
-        "La primera vez, Makeroad te pedirá iniciar sesión en la ventana de Chrome que se abre. Con \"Revisar\" " +
+        "Inicia sesión en Makeroad una vez en la pantalla Sesión (si no, te lo pedirá en la ventana de Chrome). Con \"Revisar\" " +
             "marcado, se para antes de publicar cada modelo para que lo mires."
     const val MR_NADA = "No hay carpetas válidas para subir a Makeroad."
     const val MR_PUBLICAR = "Publicar en Makeroad"
+    const val MR_INICIO = "https://www.makeroad.com/"
+    const val MR_COMO_SUBE = "La app publica los modelos como públicos (Makeroad los revisa antes de enseñarlos)."
+    const val MR_INSTRUCCIONES_LOGIN =
+        "Se ha abierto Chrome en Makeroad. Inicia sesión allí (arriba a la derecha) y, cuando veas tu foto de perfil, " +
+            "pulsa \"Ya he entrado\". La sesión se queda guardada en la app."
     fun mrBoton(n: Int) = if (n == 1) "Publicar 1 en Makeroad" else "Publicar $n en Makeroad"
 
     // ------------------------------------------------------------ Descargar de Printables (extensión de Chrome)

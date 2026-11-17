@@ -62,6 +62,14 @@ es la excepción a la regla del proyecto. Makeroad no deja publicar con menos de
 - API (de su código, sin usar): `/models/info`, `/models/work`, `/models/getEdit`, `/upload/ossurl`… La sesión va con
   una cabecera de token (`/api/user` sin ella responde `code 50001`).
 
+## Sesión (17/11/2026)
+
+La sesión de Makeroad es la cookie **`X-Token`** de www.makeroad.com; la web la manda en la cabecera `X-Token` a
+`/api/user`, que responde `code 0` con la cuenta (`nickname`, `username`…); sin ella, `code 50001`. Comprobado en el
+Chrome de la persona. La app la comprueba igual (`Sesion.comprobarMakeroad`) y en la pantalla Sesión hay una fila
+**Makeroad** con "Iniciar sesión" / "Ya he entrado", como MakerOnline y Creality: se entra una vez y se queda en el
+perfil de Chrome de la app.
+
 ## Pendiente
 
 - [ ] Iniciar sesión en Makeroad en el Chrome de la app (una vez; la ventana del diagnóstico sirve).

@@ -30,6 +30,8 @@ class Sesion(private val rutas: Rutas) {
      * @property motivo          por qué no hay sesión, para enseñárselo a la persona
      * @property creality        si hay sesión de Creality Cloud guardada en Chrome (su cookie; se
      *                           comprueba de verdad al subir, en la propia página)
+     * @property makeroad        si hay sesión de Makeroad y Makeroad la acepta (ver [comprobarMakeroad])
+     * @property nombreMakeroad  el nombre de la cuenta de Makeroad, si hay sesión
      */
     data class Estado(
         val chromeInstalado: Boolean,
@@ -37,6 +39,8 @@ class Sesion(private val rutas: Rutas) {
         val nombre: String? = null,
         val motivo: String? = null,
         val creality: Boolean = false,
+        val makeroad: Boolean = false,
+        val nombreMakeroad: String? = null,
     )
 
     /**
@@ -80,9 +84,10 @@ class Sesion(private val rutas: Rutas) {
             Browsers.playwright().use { pw ->
                 Browsers.openChrome(pw, rutas.perfilChrome, 0.0, true, false).use { ctx ->
                     val creality = tokenCreality(ctx) != null
+                    val makeroad = comprobarMakeroad(ctx)
                     val token = token(ctx)
                         ?: return Estado(chromeInstalado = true, iniciada = false, motivo = "no hay sesión iniciada",
-                            creality = creality)
+                            creality = creality, makeroad = makeroad != null, nombreMakeroad = makeroad)
                     // Mismo endpoint que usa la web al cargar tu perfil (comprobado el 31/10/2026)
                     val r = ctx.request().get(
                         "$WEB/api/user/personal/info",
@@ -90,7 +95,8 @@ class Sesion(private val rutas: Rutas) {
                             .setHeader("Authorization", token)
                             .setHeader("Accept", "application/json"),
                     )
-                    return interpretar(r.status(), r.text()).copy(creality = creality)
+                    return interpretar(r.status(), r.text())
+                        .copy(creality = creality, makeroad = makeroad != null, nombreMakeroad = makeroad)
                 }
             }
         }
@@ -103,14 +109,17 @@ class Sesion(private val rutas: Rutas) {
      *
      * @throws AgenteException si otro programa está usando Chrome (candado ocupado)
      */
-    fun abrirParaIniciar(progreso: Progreso, web: Web = Web.MAKERONLINE): Abierta {
+    fun abrirParaIniciar(progreso: Progreso, web: Web = Web.MAKERONLINE): Abierta = abrirParaIniciar(progreso, web.inicio)
+
+    /** Como el de arriba, pero con la dirección (para webs que aún no están en [Web], como Makeroad). */
+    fun abrirParaIniciar(progreso: Progreso, direccion: String): Abierta {
         val candado = AgentLock.acquire(rutas.candado, "JujaMaker (iniciando sesión)", false, progreso)
         var pw: Playwright? = null
         try {
             pw = Browsers.playwright()
             val ctx = Browsers.openChrome(pw, rutas.perfilChrome, 0.0)
             val page = if (ctx.pages().isEmpty()) ctx.newPage() else ctx.pages()[0]
-            page.navigate(web.inicio)
+            page.navigate(direccion)
             page.bringToFront()
             return Abierta(candado, pw, ctx)
         } catch (e: Exception) {
@@ -162,6 +171,37 @@ class Sesion(private val rutas: Rutas) {
          * en el código de su web el 09/11/2026, ver el documento de contexto de Creality).
          */
         private const val COOKIE_CREALITY = "model_token"
+
+        /**
+         * La sesión de Makeroad: la cookie `X-Token` de www.makeroad.com, que la web manda en la
+         * cabecera `X-Token` a /api/user (responde code 0 y los datos de la cuenta; sin ella, code
+         * 50001). Comprobado el 17/11/2026 en el Chrome de la persona. Devuelve el nombre de la
+         * cuenta, o null si no hay sesión o Makeroad no la acepta.
+         */
+        private fun comprobarMakeroad(ctx: BrowserContext): String? = try {
+            val token = ctx.cookies(MAKEROAD).firstOrNull { it.name == "X-Token" && !it.value.isNullOrBlank() }?.value
+            if (token == null) {
+                null
+            } else {
+                val r = ctx.request().get(
+                    "$MAKEROAD/api/user",
+                    RequestOptions.create()
+                        .setHeader("X-Token", java.net.URLDecoder.decode(token, Charsets.UTF_8))
+                        .setHeader("Accept", "application/json"),
+                )
+                val j = JSON.readTree(r.text())
+                if (r.status() == 200 && j.path("code").asInt(-1) == 0) {
+                    val d = j.path("data")
+                    d.path("nickname").asText("").ifBlank { d.path("username").asText("") }.ifBlank { "Makeroad" }
+                } else {
+                    null
+                }
+            }
+        } catch (_: Exception) {
+            null // sin red o la web no responde: se ve como "sin sesión" y al subir se pide entrar
+        }
+
+        private const val MAKEROAD = "https://www.makeroad.com"
 
         /** El valor de la cookie de la sesión, o null si no hay. */
         private fun token(ctx: BrowserContext): String? =
