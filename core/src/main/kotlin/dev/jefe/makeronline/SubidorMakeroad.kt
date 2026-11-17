@@ -333,7 +333,7 @@ class SubidorMakeroad(
         if (propias.size >= CatalogoMakeroad.MIN_FOTOS) return propias
         val temporal = Files.createTempDirectory("jujamaker-makeroad")
         temporal.toFile().deleteOnExit()
-        val todas = ArrayList(propias)
+        val todas = ArrayList<Path>(propias)
         var i = 0
         while (todas.size < CatalogoMakeroad.MIN_FOTOS) {
             val original = propias[i % propias.size]
@@ -341,7 +341,7 @@ class SubidorMakeroad(
             val copia = temporal.resolve(nombre.substringBeforeLast('.') + "-" + (todas.size + 1) + "." + nombre.substringAfterLast('.'))
             Files.copy(original, copia, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
             copia.toFile().deleteOnExit()
-            todas += copia
+            todas.add(copia)
             i++
         }
         progreso.nota("la carpeta tiene ${propias.size} foto(s) y Makeroad pide ${CatalogoMakeroad.MIN_FOTOS}: se repite${if (propias.size == 1) " la misma" else "n"} hasta llegar")
