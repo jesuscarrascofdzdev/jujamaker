@@ -96,6 +96,11 @@ Solo las que la persona mete en la app: las de `pendientes/` y, de `subidos/`, l
 de antes (subidas a MakerOnline hace tiempo) no entran. La primera vez, sin ese archivo, también cuentan las de
 `subidos/` cuyo `resultado.png` es del 10/11/2026 en adelante. Para meter una antigua: muévela a `pendientes/`.
 
+**Desde el 17/11/2026 (rama `makeroad`, subida unificada)**: de `pendientes/` solo entran las carpetas a las que se
+eligió subir a Printables al pulsar Subir (`PRINTABLES` en su `destinos.txt`); de `subidos/` se quitan las que tienen
+`destinos.txt` sin Printables. Al apuntar la extensión el último destino que faltaba, la carpeta pasa a `subidos/`
+(`Destino.retirarSiCompleta`).
+
 ## Descargar de Printables (11/11/2026)
 
 Misma lógica que MakerOnline y Creality (últimos N gratis de cada usuario, saltar los que tienen tu like, like al

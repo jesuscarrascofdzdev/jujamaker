@@ -22,8 +22,10 @@ y descargar modelos de MakerOnline. App no oficial.
 2. `Diagnostico<Web>.kt`: vuelca a un `.txt` lo que hay en el formulario real, para comprobar selectores.
 3. `Subidor<Web>.kt`: valida carpetas → abre Chrome con el perfil de la app → rellena → `--revisar` → envía.
    Deja `subido-<web>.txt` (no se vuelve a subir), o `error-<web>.txt` + `error-<web>.png`. No mueve carpetas.
-4. Integración: enum `Web`, `Sesion` (cookie de sesión), `SubidaMultiple` (orden: las que no mueven carpetas
-   antes que MakerOnline), `ModelFolder` (archivos ignorados) y pantallas de desktop.
+4. Integración: enum `Destino` (página de subida: su `subido-`/`error-` y si aplica a la carpeta), enum `Web` solo si
+   tiene sesión de descarga, `Sesion` (cookie de sesión), `SubidaMultiple` (ninguna mueve carpetas; al final se
+   retiran las que están en todas sus páginas), `ModelFolder` (archivos ignorados), `Ajustes.subirA` e iconos/textos
+   de desktop.
 
 ## Reglas
 - Código, comentarios, nombres y textos en **español**, con el estilo del código existente (KDoc que explica el porqué).

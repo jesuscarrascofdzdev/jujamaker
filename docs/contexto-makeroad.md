@@ -42,13 +42,16 @@ Rama: `makeroad` (sale de `printables`). Objetivo: que JujaMaker suba a **Makero
   `.brand-group` > `.brand-title` (grupo; `.on` = desplegado) y `.option-item` (opción); `.confirm-btn` = Enviar,
   `.cancel-btn` = Cancelar. Los nombres van en `CatalogoMakeroad`. **Todos los modelos van a Hogar & Vida > Decoración**
   (decisión de la persona, 17/11/2026).
-- **Etiquetas**: `input.arco-select-view-input` (el primero); sugiere las que ya has usado.
+- **Etiquetas**: `input.arco-select-view-input` con placeholder de etiqueta (el placeholder desaparece tras la primera, así que
+  se localiza por posición). Hay que **elegirlas de su desplegable** (`.arco-select-dropdown .arco-select-option`); si no sale, Enter.
+  Se cuentan las `.arco-tag`.
 - **Método de impresión** (obligatorio): `span.method-text` FDM / LCD / Others (dentro de `div.form-group`).
 - **Información del modelo**: casillas "Este es mi modelo original", "segundo modelo", "creado por IA", "NSFW" (`span.work-type-text`): no se tocan.
 - **Licencia**: tres grupos (compartir sin atribución: Sí=2/No=1; modificar y compartir: Sí=2/No=1/igual licencia=3;
   uso comercial: Sí=2/No=1). Por defecto No/No/No ("CC BY-ND"). Se pone **Sí a las tres** (lo más parecido a CC0, como en Creality).
 - **Visibilidad**: **público=1** / Privado=2. Precio: Gratis. Hay "Lanzamiento programado".
-- **Términos**: "Entiendo y acepto subir mi trabajo a MakeRoad…". Obligatoria para publicar
+- **Términos**: "Entiendo y acepto subir mi trabajo a MakeRoad…". No es un checkbox de Arco: se pulsa el cuadradito a la
+  izquierda del texto (12–24 px) o, si no se encuentra, el principio del texto. Obligatoria para publicar
   (`toasts.agreementRequired`: "Por favor, acepte primero los términos de la plataforma.").
 - **Botones** (`div.layout-btn`, por orden): **"Registrar"** (en el código de la web `buttons.save`; en inglés "Save":
   guarda en borradores), "Avance" (vista previa) y "Publicar" (desactivado hasta que todo está bien).
@@ -73,11 +76,12 @@ perfil de Chrome de la app.
 
 ## Pendiente
 
-- [ ] Iniciar sesión en Makeroad en el Chrome de la app (una vez; la ventana del diagnóstico sirve).
-- [ ] Primera subida con **"Subir a Makeroad (revisar)"** y una carpeta de prueba: ver si sale el captcha al publicar,
-      si "Publicar" se activa con todo relleno y si el aviso "Enviado para revisión" coincide. Anotarlo aquí.
-- [ ] Si va bien: integrarlo en la app (enum `Web`, `Sesion`, `SubidaMultiple`, pantallas), como Creality.
-      Ojo: la rama `nexprint` también añade una web al enum: mejor juntarlas antes.
+- [x] Sesión guardada en la app (pantalla Sesión → Makeroad).
+- [x] Integrado en la app: no en el enum `Web` (Makeroad no descarga) sino en `Destino` (ver abajo).
+- [ ] Primera subida real completa: ver si sale el captcha al publicar, si "Publicar" se activa con todo relleno
+      y si el aviso "Enviado para revisión" coincide. Categoría, términos y etiquetas ya se han corregido tras
+      las primeras pruebas (17/11/2026), falta verlo terminar. Anotarlo aquí.
+- [ ] La rama `nexprint` (Jesus) añade NexPrint: al juntarla, como quinta entrada de `Destino`.
 
 ## Subida unificada (17/11/2026)
 
