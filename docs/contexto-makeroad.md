@@ -40,7 +40,8 @@ Rama: `makeroad` (sale de `printables`). Objetivo: que JujaMaker suba a **Makero
 - **Descripción**: `[contenteditable=true]` (wangEditor). Obligatoria.
 - **Categoría** (obligatoria): `.tag-input-box` abre `.selection-modal` ("Clasificación de modelos") con
   `.brand-group` > `.brand-title` (grupo; `.on` = desplegado) y `.option-item` (opción); `.confirm-btn` = Enviar,
-  `.cancel-btn` = Cancelar. Los nombres van en `CatalogoMakeroad`.
+  `.cancel-btn` = Cancelar. Los nombres van en `CatalogoMakeroad`. **Todos los modelos van a Hogar & Vida > Decoración**
+  (decisión de la persona, 17/11/2026).
 - **Etiquetas**: `input.arco-select-view-input` (el primero); sugiere las que ya has usado.
 - **Método de impresión** (obligatorio): `span.method-text` FDM / LCD / Others (dentro de `div.form-group`).
 - **Información del modelo**: casillas "Este es mi modelo original", "segundo modelo", "creado por IA", "NSFW" (`span.work-type-text`): no se tocan.
