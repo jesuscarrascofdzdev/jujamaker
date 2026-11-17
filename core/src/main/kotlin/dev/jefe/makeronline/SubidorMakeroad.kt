@@ -420,12 +420,28 @@ class SubidorMakeroad(
             Locator.FilterOptions().setHasText(Pattern.compile("^\\W*" + Pattern.quote(c.opcion) + "\\W*$"))
         ).first()
         if (opcion.count() == 0) throw IllegalStateException("no encuentro \"${c.opcion}\" en \"${c.grupo}\"")
-        opcion.click()
+        opcion.click() // cada modelo empieza en un formulario nuevo: no hay nada marcado antes
         modal.locator(".confirm-btn").first().click()
+        try {
+            modal.waitFor(Locator.WaitForOptions().setState(com.microsoft.playwright.options.WaitForSelectorState.HIDDEN).setTimeout(5_000.0))
+        } catch (_: TimeoutError) {
+            throw IllegalStateException("la ventana de categorías no se cierra al pulsar Enviar")
+        }
         page.waitForTimeout(500.0)
-        val puesta = page.locator(".tag-input-box").first().innerText()
-        if (c.opcion !in puesta && c.grupo !in puesta) {
-            throw IllegalStateException("la categoría no se ha quedado puesta (se ve \"${puesta.trim()}\")")
+        // La elegida no sale dentro de .tag-input-box sino al lado (en .selected-tags): se mira todo el
+        // campo de la categoría (el contenedor que tiene la caja y lo elegido)
+        val puesta = page.locator(".tag-input-box").first().evaluate(
+            """caja => {
+              let p = caja;
+              for (let i = 0; i < 6 && p.parentElement; i++) {
+                p = p.parentElement;
+                if (p.querySelector('.selected-tags') || (p.className || '').toString().includes('form-item')) break;
+              }
+              return (p.innerText || '').replace(/\u200b/g, '');
+            }"""
+        ) as String
+        if (c.opcion !in puesta) {
+            throw IllegalStateException("la categoría no se ha quedado puesta (en el campo se ve \"${puesta.replace(Regex("\\s+"), " ").trim().take(120)}\")")
         }
     }
 
